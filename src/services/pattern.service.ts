@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/errors";
-import { uniquePatternSlug } from "@/lib/slug";
+import { uniquePatternSlug, uniqueTopicSlug } from "@/lib/slug";
 
 const patternListSelect = {
   id: true, slug: true, name: true, number: true, difficulty: true,
@@ -54,8 +54,47 @@ export async function getPatternBySlug(slug: string, userId?: string) {
 
 // ---- Admin ----
 
+export async function resolveOrCreateTopic(topicId?: string, topicName?: string): Promise<string> {
+  if (topicId && topicId.trim()) {
+    const existingById = await prisma.topic.findUnique({ where: { id: topicId.trim() } });
+    if (existingById) return existingById.id;
+  }
+
+  const rawName = (topicName || topicId || "").trim();
+  if (!rawName) {
+    throw ApiError.badRequest("Curriculum Topic / Track is required");
+  }
+
+  // Check if topic exists by name (case-insensitive)
+  const existingByName = await prisma.topic.findFirst({
+    where: {
+      name: { equals: rawName, mode: "insensitive" },
+    },
+  });
+
+  if (existingByName) {
+    return existingByName.id;
+  }
+
+  // Create new topic in the database
+  const slug = await uniqueTopicSlug(rawName);
+  const maxOrder = await prisma.topic.aggregate({ _max: { order: true } });
+  const newTopic = await prisma.topic.create({
+    data: {
+      name: rawName,
+      slug,
+      order: (maxOrder._max.order ?? 0) + 1,
+      published: true,
+      icon: "Target",
+    },
+  });
+
+  return newTopic.id;
+}
+
 interface PatternInput {
-  topicId: string;
+  topicId?: string;
+  topicName?: string;
   number: number;
   name: string;
   shortDescription?: string | null;
@@ -108,12 +147,14 @@ export async function adminGetPattern(id: string) {
 }
 
 export async function adminCreatePattern(input: PatternInput) {
+  const resolvedTopicId = await resolveOrCreateTopic(input.topicId, input.topicName);
   const slug = await uniquePatternSlug(input.name);
-  const { useCases, whenNotToUse, warnings, benchmarkProblemIds, ...rest } = input;
+  const { useCases, whenNotToUse, warnings, benchmarkProblemIds, topicId, topicName, ...rest } = input;
 
   const createdPattern = await prisma.pattern.create({
     data: {
       ...rest,
+      topicId: resolvedTopicId,
       status: input.status || "PUBLISHED",
       slug,
       useCases: {
@@ -144,11 +185,15 @@ export async function adminCreatePattern(input: PatternInput) {
 
 export async function adminUpdatePattern(id: string, input: Partial<PatternInput>) {
   const existing = await adminGetPattern(id);
-  const { useCases, whenNotToUse, warnings, benchmarkProblemIds, name, ...rest } = input;
+  const { useCases, whenNotToUse, warnings, benchmarkProblemIds, name, topicId, topicName, ...rest } = input;
   const data: Record<string, unknown> = { ...rest };
   if (name && name !== existing.name) {
     data.name = name;
     data.slug = await uniquePatternSlug(name);
+  }
+
+  if (topicId !== undefined || topicName !== undefined) {
+    data.topicId = await resolveOrCreateTopic(topicId, topicName);
   }
 
   if (useCases || whenNotToUse) {

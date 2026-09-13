@@ -1,7 +1,8 @@
 import { z } from "zod";
 
-export const createPatternSchema = z.object({
-  topicId: z.string().min(1, "topicId is required"),
+export const createPatternBaseSchema = z.object({
+  topicId: z.string().optional(),
+  topicName: z.string().optional(),
   number: z.number().int(),
   name: z.string().min(2).max(150),
   shortDescription: z.string().max(300).nullable().optional(),
@@ -27,4 +28,13 @@ export const createPatternSchema = z.object({
   warnings: z.array(z.string()).optional(),
 });
 
-export const updatePatternSchema = createPatternSchema.partial();
+export const createPatternSchema = createPatternBaseSchema.refine(
+  (data) => Boolean((data.topicId && data.topicId.trim().length > 0) || (data.topicName && data.topicName.trim().length > 0)),
+  {
+    message: "Curriculum Topic / Track (topicId or topicName) is required",
+    path: ["topicId"],
+  }
+);
+
+export const updatePatternSchema = createPatternBaseSchema.partial();
+

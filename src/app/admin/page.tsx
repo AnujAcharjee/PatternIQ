@@ -13,6 +13,7 @@ import { apiClient } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth-context";
 import { AdminUsersTab } from "@/components/admin/admin-users-tab";
 import { FormattedTextarea } from "@/components/ui/formatted-textarea";
+import { TopicFillInput } from "@/components/admin/topic-fill-input";
 import {
   Shield,
   Layers,
@@ -212,6 +213,8 @@ export default function AdminPage() {
   // FORM STATES: 2. NEW PATTERN
   // -------------------------------------------------------------
   const [newPatternTopicId, setNewPatternTopicId] = useState("");
+  const [newPatternTopicName, setNewPatternTopicName] = useState("");
+  const [editingPatternTopicName, setEditingPatternTopicName] = useState("");
   const [newPatternNumber, setNewPatternNumber] = useState(1);
   const [newPatternName, setNewPatternName] = useState("");
   const [newPatternDifficulty, setNewPatternDifficulty] = useState<"EASY" | "MEDIUM" | "HARD">("MEDIUM");
@@ -337,6 +340,7 @@ export default function AdminPage() {
         setTopics(topicsRes.data);
         if (topicsRes.data.length > 0 && !newPatternTopicId) {
           setNewPatternTopicId(topicsRes.data[0].id);
+          setNewPatternTopicName(topicsRes.data[0].name);
         }
       }
 
@@ -455,14 +459,15 @@ export default function AdminPage() {
   // -------------------------------------------------------------
   const handleCreatePattern = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newPatternName.trim() || !newPatternTopicId) return;
+    if (!newPatternName.trim() || (!newPatternTopicId && !newPatternTopicName.trim())) return;
     setIsSubmittingPattern(true);
 
     try {
       const res = await apiClient<PatternItem>("/admin/patterns", {
         method: "POST",
         body: JSON.stringify({
-          topicId: newPatternTopicId,
+          topicId: newPatternTopicId || undefined,
+          topicName: newPatternTopicName.trim() || undefined,
           number: Number(newPatternNumber),
           name: cleanLatexMath(newPatternName.trim()),
           shortDescription: newPatternShortDesc.trim() ? cleanLatexMath(newPatternShortDesc.trim()) : undefined,
@@ -491,6 +496,7 @@ export default function AdminPage() {
         setShowPatternModal(false);
         showSuccess(`Pattern "${newPatternName}" successfully created and published!`);
         setNewPatternName("");
+        setNewPatternTopicName("");
         setNewPatternShortDesc("");
         setNewPatternWhatIsThis("");
         setNewPatternIntuition("");
@@ -505,7 +511,7 @@ export default function AdminPage() {
         setNewPatternJs("");
         setNewPatternSelectedProblems([]);
         setNewPatternNumber((n) => Number(n) + 1);
-        loadAllAdminData();
+        await loadAllAdminData();
       } else {
         showError(res.error?.message || "Failed to create pattern");
       }
@@ -523,6 +529,8 @@ export default function AdminPage() {
     setEditingPattern(pat);
     const probIds = pat.problems?.map((p: any) => p.problemId || p.id || p.problem?.id).filter(Boolean) || [];
     setEditingPatternSelectedProblems(probIds);
+    const existingTopic = topics.find((t) => t.id === pat.topicId);
+    setEditingPatternTopicName(existingTopic?.name || pat.topic?.name || "");
     setPatternModalTab("meta");
     setTemplateLangTab("python");
   };
@@ -534,7 +542,8 @@ export default function AdminPage() {
 
     try {
       const payload = {
-        topicId: editingPattern.topicId,
+        topicId: editingPattern.topicId || undefined,
+        topicName: editingPatternTopicName.trim() || undefined,
         number: Number(editingPattern.number),
         name: cleanLatexMath(editingPattern.name.trim()),
         shortDescription: editingPattern.shortDescription?.trim() ? cleanLatexMath(editingPattern.shortDescription.trim()) : null,
@@ -1760,22 +1769,25 @@ export default function AdminPage() {
 
                 {/* TAB 1: Meta */}
                 <TabsContent value="meta" className="space-y-3">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1.5">
-                      <label className="font-semibold text-foreground">Curriculum Topic / Track</label>
-                      <select
-                        className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-xs text-foreground"
-                        value={newPatternTopicId}
-                        onChange={(e) => setNewPatternTopicId(e.target.value)}
-                        required
-                      >
-                        {topics.map((t) => (
-                          <option key={t.id} value={t.id}>
-                            {t.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                  <div className="grid grid-cols-2 gap-3 items-start">
+                    <TopicFillInput
+                      topics={topics}
+                      selectedTopicId={newPatternTopicId}
+                      typedTopicName={newPatternTopicName}
+                      onChange={(topicId, topicName) => {
+                        setNewPatternTopicId(topicId);
+                        setNewPatternTopicName(topicName);
+                      }}
+                      onTopicCreated={(newTopic) => {
+                        setTopics((prev) => [...prev, newTopic]);
+                        setNewPatternTopicId(newTopic.id);
+                        setNewPatternTopicName(newTopic.name);
+                        loadAllAdminData();
+                      }}
+                      onSuccess={showSuccess}
+                      onError={showError}
+                      required
+                    />
 
                     <div className="space-y-1.5">
                       <label className="font-semibold text-foreground">Pattern Number (#)</label>
@@ -2070,22 +2082,25 @@ export default function AdminPage() {
 
                 {/* TAB 1: Meta */}
                 <TabsContent value="meta" className="space-y-3">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1.5">
-                      <label className="font-semibold text-foreground">Topic</label>
-                      <select
-                        className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-xs text-foreground"
-                        value={editingPattern.topicId}
-                        onChange={(e) => setEditingPattern({ ...editingPattern, topicId: e.target.value })}
-                        required
-                      >
-                        {topics.map((t) => (
-                          <option key={t.id} value={t.id}>
-                            {t.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                  <div className="grid grid-cols-2 gap-3 items-start">
+                    <TopicFillInput
+                      topics={topics}
+                      selectedTopicId={editingPattern.topicId}
+                      typedTopicName={editingPatternTopicName}
+                      onChange={(topicId, topicName) => {
+                        setEditingPattern({ ...editingPattern, topicId });
+                        setEditingPatternTopicName(topicName);
+                      }}
+                      onTopicCreated={(newTopic) => {
+                        setTopics((prev) => [...prev, newTopic]);
+                        setEditingPattern({ ...editingPattern, topicId: newTopic.id });
+                        setEditingPatternTopicName(newTopic.name);
+                        loadAllAdminData();
+                      }}
+                      onSuccess={showSuccess}
+                      onError={showError}
+                      required
+                    />
 
                     <div className="space-y-1.5">
                       <label className="font-semibold text-foreground">Number (#)</label>
