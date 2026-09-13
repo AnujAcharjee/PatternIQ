@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { NextRequest } from "next/server";
 import { apiHandler, requireAdmin, parseJson } from "@/lib/handler";
 import { ok } from "@/lib/api-response";

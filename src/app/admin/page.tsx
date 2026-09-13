@@ -425,8 +425,8 @@ export default function AdminPage() {
         method: "PATCH",
         body: JSON.stringify({
           name: editingTopic.name.trim(),
-          description: editingTopic.description?.trim() || undefined,
-          icon: editingTopic.icon || undefined,
+          description: editingTopic.description?.trim() ? editingTopic.description.trim() : null,
+          icon: editingTopic.icon?.trim() ? editingTopic.icon.trim() : null,
           order: Number(editingTopic.order),
           published: editingTopic.published,
         }),
@@ -436,6 +436,7 @@ export default function AdminPage() {
         setTopics((prev) => prev.map((t) => (t.id === editingTopic.id ? res.data! : t)));
         setEditingTopic(null);
         showSuccess(`Topic "${editingTopic.name}" successfully updated!`);
+        await loadAllAdminData();
       } else {
         showError(res.error?.message || "Failed to update topic");
       }
@@ -518,43 +519,54 @@ export default function AdminPage() {
   // -------------------------------------------------------------
   // HANDLERS: 4. UPDATE PATTERN
   // -------------------------------------------------------------
+  const openEditPattern = (pat: PatternItem) => {
+    setEditingPattern(pat);
+    const probIds = pat.problems?.map((p: any) => p.problemId || p.id || p.problem?.id).filter(Boolean) || [];
+    setEditingPatternSelectedProblems(probIds);
+    setPatternModalTab("meta");
+    setTemplateLangTab("python");
+  };
+
   const handleUpdatePattern = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingPattern || !editingPattern.name.trim()) return;
     setIsSubmittingPattern(true);
 
     try {
+      const payload = {
+        topicId: editingPattern.topicId,
+        number: Number(editingPattern.number),
+        name: cleanLatexMath(editingPattern.name.trim()),
+        shortDescription: editingPattern.shortDescription?.trim() ? cleanLatexMath(editingPattern.shortDescription.trim()) : null,
+        whatIsThis: editingPattern.whatIsThis?.trim() ? cleanLatexMath(editingPattern.whatIsThis.trim()) : null,
+        intuition: editingPattern.intuition?.trim() ? cleanLatexMath(editingPattern.intuition.trim()) : null,
+        identificationSignals: editingPattern.identificationSignals?.trim() ? cleanLatexMath(editingPattern.identificationSignals.trim()) : null,
+        executionRecipe: editingPattern.executionRecipe?.trim() ? cleanLatexMath(editingPattern.executionRecipe.trim()) : null,
+        coreIdea: editingPattern.coreIdea?.trim() ? cleanLatexMath(editingPattern.coreIdea.trim()) : null,
+        interviewRule: editingPattern.interviewRule?.trim() ? cleanLatexMath(editingPattern.interviewRule.trim()) : null,
+        difficulty: editingPattern.difficulty,
+        importance: Number(editingPattern.importance),
+        timeComplexity: editingPattern.timeComplexity?.trim() ? cleanLatexMath(editingPattern.timeComplexity.trim()) : null,
+        spaceComplexity: editingPattern.spaceComplexity?.trim() ? cleanLatexMath(editingPattern.spaceComplexity.trim()) : null,
+        pseudocode: editingPattern.pseudocode?.trim() ? cleanLatexMath(editingPattern.pseudocode.trim()) : null,
+        cppTemplate: editingPattern.cppTemplate?.trim() ? cleanLatexMath(editingPattern.cppTemplate.trim()) : null,
+        javaTemplate: editingPattern.javaTemplate?.trim() ? cleanLatexMath(editingPattern.javaTemplate.trim()) : null,
+        jsTemplate: editingPattern.jsTemplate?.trim() ? cleanLatexMath(editingPattern.jsTemplate.trim()) : null,
+        pyTemplate: editingPattern.pyTemplate?.trim() ? cleanLatexMath(editingPattern.pyTemplate.trim()) : null,
+        benchmarkProblemIds: editingPatternSelectedProblems,
+      };
+
       const res = await apiClient<PatternItem>(`/admin/patterns/${editingPattern.id}`, {
         method: "PATCH",
-        body: JSON.stringify({
-          topicId: editingPattern.topicId,
-          number: Number(editingPattern.number),
-          name: cleanLatexMath(editingPattern.name.trim()),
-          shortDescription: editingPattern.shortDescription?.trim() ? cleanLatexMath(editingPattern.shortDescription.trim()) : undefined,
-          whatIsThis: editingPattern.whatIsThis?.trim() ? cleanLatexMath(editingPattern.whatIsThis.trim()) : undefined,
-          intuition: editingPattern.intuition?.trim() ? cleanLatexMath(editingPattern.intuition.trim()) : undefined,
-          identificationSignals: editingPattern.identificationSignals?.trim() ? cleanLatexMath(editingPattern.identificationSignals.trim()) : undefined,
-          executionRecipe: editingPattern.executionRecipe?.trim() ? cleanLatexMath(editingPattern.executionRecipe.trim()) : undefined,
-          coreIdea: editingPattern.coreIdea?.trim() ? cleanLatexMath(editingPattern.coreIdea.trim()) : undefined,
-          interviewRule: editingPattern.interviewRule?.trim() ? cleanLatexMath(editingPattern.interviewRule.trim()) : undefined,
-          difficulty: editingPattern.difficulty,
-          importance: Number(editingPattern.importance),
-          timeComplexity: editingPattern.timeComplexity ? cleanLatexMath(editingPattern.timeComplexity) : undefined,
-          spaceComplexity: editingPattern.spaceComplexity ? cleanLatexMath(editingPattern.spaceComplexity) : undefined,
-          pseudocode: editingPattern.pseudocode?.trim() ? cleanLatexMath(editingPattern.pseudocode.trim()) : undefined,
-          cppTemplate: editingPattern.cppTemplate?.trim() ? cleanLatexMath(editingPattern.cppTemplate.trim()) : undefined,
-          javaTemplate: editingPattern.javaTemplate?.trim() ? cleanLatexMath(editingPattern.javaTemplate.trim()) : undefined,
-          jsTemplate: editingPattern.jsTemplate?.trim() ? cleanLatexMath(editingPattern.jsTemplate.trim()) : undefined,
-          pyTemplate: editingPattern.pyTemplate?.trim() ? cleanLatexMath(editingPattern.pyTemplate.trim()) : undefined,
-          benchmarkProblemIds: editingPatternSelectedProblems,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (res.success && res.data) {
-        setPatterns((prev) => prev.map((p) => (p.id === editingPattern.id ? { ...p, ...res.data! } : p)));
+        const updated = res.data;
+        setPatterns((prev) => prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p)));
         setEditingPattern(null);
-        showSuccess(`Pattern "${editingPattern.name}" successfully updated!`);
-        loadAllAdminData();
+        showSuccess(`Pattern "${updated.name}" successfully updated!`);
+        await loadAllAdminData();
       } else {
         showError(res.error?.message || "Failed to update pattern");
       }
@@ -628,8 +640,8 @@ export default function AdminPage() {
         method: "PATCH",
         body: JSON.stringify({
           title: editingProblem.title.trim(),
-          platform: editingProblem.platform?.trim() || undefined,
-          externalId: editingProblem.externalId?.trim() || undefined,
+          platform: editingProblem.platform?.trim() ? editingProblem.platform.trim() : null,
+          externalId: editingProblem.externalId?.trim() ? editingProblem.externalId.trim() : null,
           solveUrl: editingProblem.solveUrl.trim(),
           difficulty: editingProblem.difficulty,
         }),
@@ -639,6 +651,7 @@ export default function AdminPage() {
         setProblems((prev) => prev.map((p) => (p.id === editingProblem.id ? { ...p, ...res.data! } : p)));
         setEditingProblem(null);
         showSuccess(`Problem "${editingProblem.title}" successfully updated!`);
+        await loadAllAdminData();
       } else {
         showError(res.error?.message || "Failed to update problem");
       }
@@ -1163,7 +1176,7 @@ export default function AdminPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => setEditingPattern(pat)}
+                        onClick={() => openEditPattern(pat)}
                         className="text-xs h-7 px-2.5 gap-1 cursor-pointer"
                       >
                         <Edit2 className="h-3 w-3" />
@@ -2048,204 +2061,283 @@ export default function AdminPage() {
             </div>
 
             <form onSubmit={handleUpdatePattern} className="space-y-4 overflow-y-auto pr-1 flex-1 text-xs">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label className="font-semibold text-foreground">Topic</label>
-                  <select
-                    className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-xs text-foreground"
-                    value={editingPattern.topicId}
-                    onChange={(e) => setEditingPattern({ ...editingPattern, topicId: e.target.value })}
-                    required
-                  >
-                    {topics.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              <Tabs value={patternModalTab} onValueChange={(v) => setPatternModalTab(v as any)} className="w-full">
+                <TabsList className="grid grid-cols-3 w-full mb-4">
+                  <TabsTrigger value="meta">1. Meta & Topic</TabsTrigger>
+                  <TabsTrigger value="intuition">2. Intuition & Rules</TabsTrigger>
+                  <TabsTrigger value="code">3. Code Templates</TabsTrigger>
+                </TabsList>
 
-                <div className="space-y-1.5">
-                  <label className="font-semibold text-foreground">Number (#)</label>
-                  <Input
-                    type="number"
-                    value={editingPattern.number}
-                    onChange={(e) => setEditingPattern({ ...editingPattern, number: Number(e.target.value) })}
-                    required
-                  />
-                </div>
-              </div>
+                {/* TAB 1: Meta */}
+                <TabsContent value="meta" className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="font-semibold text-foreground">Topic</label>
+                      <select
+                        className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-xs text-foreground"
+                        value={editingPattern.topicId}
+                        onChange={(e) => setEditingPattern({ ...editingPattern, topicId: e.target.value })}
+                        required
+                      >
+                        {topics.map((t) => (
+                          <option key={t.id} value={t.id}>
+                            {t.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-              <div className="space-y-1.5">
-                <label className="font-semibold text-foreground">Pattern Name</label>
-                <Input
-                  required
-                  value={editingPattern.name}
-                  onChange={(e) => setEditingPattern({ ...editingPattern, name: e.target.value })}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label className="font-semibold text-foreground">Difficulty</label>
-                  <select
-                    className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-xs text-foreground"
-                    value={editingPattern.difficulty}
-                    onChange={(e) => setEditingPattern({ ...editingPattern, difficulty: e.target.value as any })}
-                  >
-                    <option value="EASY">EASY</option>
-                    <option value="MEDIUM">MEDIUM</option>
-                    <option value="HARD">HARD</option>
-                  </select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="font-semibold text-foreground">Importance (1-5)</label>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={5}
-                    value={editingPattern.importance}
-                    onChange={(e) => setEditingPattern({ ...editingPattern, importance: Number(e.target.value) })}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label className="font-semibold text-foreground">Time Complexity</label>
-                  <Input
-                    value={editingPattern.timeComplexity || ""}
-                    onChange={(e) => setEditingPattern({ ...editingPattern, timeComplexity: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="font-semibold text-foreground">Space Complexity</label>
-                  <Input
-                    value={editingPattern.spaceComplexity || ""}
-                    onChange={(e) => setEditingPattern({ ...editingPattern, spaceComplexity: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="font-semibold text-foreground">Short Summary</label>
-                <Textarea
-                  rows={2}
-                  value={editingPattern.shortDescription || ""}
-                  onChange={(e) => setEditingPattern({ ...editingPattern, shortDescription: e.target.value })}
-                />
-              </div>
-
-              <div className="space-y-4 pt-2 border-t border-border">
-                <div className="rounded-xl border border-border bg-muted/10 p-3 space-y-3">
-                  <h3 className="text-xs font-bold text-primary flex items-center gap-1.5 uppercase tracking-wider">
-                    <span>1. Mental Model & Core Intuition</span>
-                  </h3>
-                  <FormattedTextarea
-                    value={editingPattern.intuition || ""}
-                    onChange={(val) => setEditingPattern({ ...editingPattern, intuition: val })}
-                    placeholder="Explain the underlying visual, mathematical, or structural concept... Use Bold & Underline for core keywords."
-                    rows={3}
-                  />
-                </div>
-
-                <div className="rounded-xl border border-border bg-muted/10 p-3 space-y-3">
-                  <h3 className="text-xs font-bold text-primary flex items-center gap-1.5 uppercase tracking-wider">
-                    <span>2. Identification Signals</span>
-                  </h3>
-                  <FormattedTextarea
-                    value={editingPattern.identificationSignals || ""}
-                    onChange={(val) => setEditingPattern({ ...editingPattern, identificationSignals: val })}
-                    placeholder="List key keywords or pattern indicators in problem descriptions."
-                    rows={3}
-                  />
-                </div>
-
-                <div className="rounded-xl border border-border bg-muted/10 p-3 space-y-3">
-                  <h3 className="text-xs font-bold text-primary flex items-center gap-1.5 uppercase tracking-wider">
-                    <span>3. Execution Recipe</span>
-                  </h3>
-                  <FormattedTextarea
-                    value={editingPattern.executionRecipe || ""}
-                    onChange={(val) => setEditingPattern({ ...editingPattern, executionRecipe: val })}
-                    placeholder="Step-by-step procedure to execute this pattern."
-                    rows={3}
-                  />
-                </div>
-
-                <div className="rounded-xl border border-border bg-muted/10 p-3 space-y-3">
-                  <h3 className="text-xs font-bold text-primary flex items-center gap-1.5 uppercase tracking-wider">
-                    <span>4. Interview Identification Rule</span>
-                  </h3>
-                  <FormattedTextarea
-                    value={editingPattern.interviewRule || ""}
-                    onChange={(val) => setEditingPattern({ ...editingPattern, interviewRule: val })}
-                    placeholder="e.g. Sorted array + subarray constraints -> Two Pointer or Sliding Window."
-                    rows={2}
-                  />
-                </div>
-
-                <div className="rounded-xl border border-border bg-muted/10 p-3 space-y-2">
-                  <h3 className="text-xs font-bold text-amber-500 flex items-center gap-1.5 uppercase tracking-wider">
-                    <span>5. Pseudocode Blueprint</span>
-                  </h3>
-                  <Textarea
-                    rows={5}
-                    className="font-mono text-[11px] bg-background"
-                    value={editingPattern.pseudocode || ""}
-                    onChange={(e) => setEditingPattern({ ...editingPattern, pseudocode: e.target.value })}
-                  />
-                </div>
-
-                {/* 6. Benchmark Problems Selection */}
-                <div className="rounded-xl border border-border bg-muted/10 p-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-xs font-bold text-emerald-500 uppercase tracking-wider">
-                      Benchmark Problems ({editingPatternSelectedProblems.length} Selected)
-                    </h3>
-                    <span className="text-[11px] text-muted-foreground">Select problems to link to this pattern</span>
+                    <div className="space-y-1.5">
+                      <label className="font-semibold text-foreground">Number (#)</label>
+                      <Input
+                        type="number"
+                        value={editingPattern.number}
+                        onChange={(e) => setEditingPattern({ ...editingPattern, number: Number(e.target.value) })}
+                        required
+                      />
+                    </div>
                   </div>
 
-                  <div className="max-h-48 overflow-y-auto border border-border rounded-lg bg-background divide-y divide-border/60">
-                    {problems.length > 0 ? (
-                      problems.map((prob) => {
-                        const isChecked = editingPatternSelectedProblems.includes(prob.id);
-                        return (
-                          <label
-                            key={prob.id}
-                            className="flex items-center justify-between p-2.5 hover:bg-muted/30 cursor-pointer select-none text-xs"
-                          >
-                            <div className="flex items-center gap-2.5 min-w-0">
-                              <input
-                                type="checkbox"
-                                checked={isChecked}
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    setEditingPatternSelectedProblems((prev) => [...prev, prob.id]);
-                                  } else {
-                                    setEditingPatternSelectedProblems((prev) => prev.filter((id) => id !== prob.id));
-                                  }
-                                }}
-                                className="rounded border-input text-primary focus:ring-primary h-4 w-4"
-                              />
-                              <span className="font-semibold text-foreground truncate">{prob.title}</span>
-                              <Badge variant={prob.difficulty === "EASY" ? "easy" : "medium"} className="text-[10px]">
-                                {prob.difficulty}
-                              </Badge>
-                            </div>
-                            <span className="text-[11px] font-mono text-muted-foreground shrink-0">{prob.platform || "LeetCode"}</span>
-                          </label>
-                        );
-                      })
-                    ) : (
-                      <div className="p-4 text-center text-xs text-muted-foreground">
-                        No problems available in database. Create problems in Problems tab first.
-                      </div>
+                  <div className="space-y-1.5">
+                    <label className="font-semibold text-foreground">Pattern Name</label>
+                    <Input
+                      required
+                      value={editingPattern.name}
+                      onChange={(e) => setEditingPattern({ ...editingPattern, name: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="font-semibold text-foreground">Difficulty</label>
+                      <select
+                        className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-xs text-foreground"
+                        value={editingPattern.difficulty}
+                        onChange={(e) => setEditingPattern({ ...editingPattern, difficulty: e.target.value as any })}
+                      >
+                        <option value="EASY">EASY</option>
+                        <option value="MEDIUM">MEDIUM</option>
+                        <option value="HARD">HARD</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="font-semibold text-foreground">Importance (1-5)</label>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={5}
+                        value={editingPattern.importance}
+                        onChange={(e) => setEditingPattern({ ...editingPattern, importance: Number(e.target.value) })}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="font-semibold text-foreground">Time Complexity</label>
+                      <Input
+                        value={editingPattern.timeComplexity || ""}
+                        onChange={(e) => setEditingPattern({ ...editingPattern, timeComplexity: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="font-semibold text-foreground">Space Complexity</label>
+                      <Input
+                        value={editingPattern.spaceComplexity || ""}
+                        onChange={(e) => setEditingPattern({ ...editingPattern, spaceComplexity: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="font-semibold text-foreground">Short Summary</label>
+                    <Textarea
+                      rows={2}
+                      value={editingPattern.shortDescription || ""}
+                      onChange={(e) => setEditingPattern({ ...editingPattern, shortDescription: e.target.value })}
+                    />
+                  </div>
+                </TabsContent>
+
+                {/* TAB 2: Intuition & Rules */}
+                <TabsContent value="intuition" className="space-y-4">
+                  <div className="rounded-xl border border-border bg-muted/10 p-3 space-y-3">
+                    <h3 className="text-xs font-bold text-primary flex items-center gap-1.5 uppercase tracking-wider">
+                      <span>1. Mental Model & Core Intuition</span>
+                    </h3>
+                    <FormattedTextarea
+                      value={editingPattern.intuition || ""}
+                      onChange={(val) => setEditingPattern({ ...editingPattern, intuition: val })}
+                      placeholder="Explain the underlying visual, mathematical, or structural concept... Use Bold & Underline for core keywords."
+                      rows={3}
+                    />
+                  </div>
+
+                  <div className="rounded-xl border border-border bg-muted/10 p-3 space-y-3">
+                    <h3 className="text-xs font-bold text-primary flex items-center gap-1.5 uppercase tracking-wider">
+                      <span>2. Identification Signals</span>
+                    </h3>
+                    <FormattedTextarea
+                      value={editingPattern.identificationSignals || ""}
+                      onChange={(val) => setEditingPattern({ ...editingPattern, identificationSignals: val })}
+                      placeholder="List key keywords or pattern indicators in problem descriptions."
+                      rows={3}
+                    />
+                  </div>
+
+                  <div className="rounded-xl border border-border bg-muted/10 p-3 space-y-3">
+                    <h3 className="text-xs font-bold text-primary flex items-center gap-1.5 uppercase tracking-wider">
+                      <span>3. Execution Recipe</span>
+                    </h3>
+                    <FormattedTextarea
+                      value={editingPattern.executionRecipe || ""}
+                      onChange={(val) => setEditingPattern({ ...editingPattern, executionRecipe: val })}
+                      placeholder="Step-by-step procedure to execute this pattern."
+                      rows={3}
+                    />
+                  </div>
+
+                  <div className="rounded-xl border border-border bg-muted/10 p-3 space-y-3">
+                    <h3 className="text-xs font-bold text-primary flex items-center gap-1.5 uppercase tracking-wider">
+                      <span>4. Interview Identification Rule</span>
+                    </h3>
+                    <FormattedTextarea
+                      value={editingPattern.interviewRule || ""}
+                      onChange={(val) => setEditingPattern({ ...editingPattern, interviewRule: val })}
+                      placeholder="e.g. Sorted array + subarray constraints -> Two Pointer or Sliding Window."
+                      rows={2}
+                    />
+                  </div>
+
+                  <div className="rounded-xl border border-border bg-muted/10 p-3 space-y-2">
+                    <h3 className="text-xs font-bold text-amber-500 flex items-center gap-1.5 uppercase tracking-wider">
+                      <span>5. Pseudocode Blueprint</span>
+                    </h3>
+                    <Textarea
+                      rows={5}
+                      className="font-mono text-[11px] bg-background"
+                      value={editingPattern.pseudocode || ""}
+                      onChange={(e) => setEditingPattern({ ...editingPattern, pseudocode: e.target.value })}
+                    />
+                  </div>
+
+                  {/* 6. Benchmark Problems Selection */}
+                  <div className="rounded-xl border border-border bg-muted/10 p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-xs font-bold text-emerald-500 uppercase tracking-wider">
+                        Benchmark Problems ({editingPatternSelectedProblems.length} Selected)
+                      </h3>
+                      <span className="text-[11px] text-muted-foreground">Select problems to link to this pattern</span>
+                    </div>
+
+                    <div className="max-h-48 overflow-y-auto border border-border rounded-lg bg-background divide-y divide-border/60">
+                      {problems.length > 0 ? (
+                        problems.map((prob) => {
+                          const isChecked = editingPatternSelectedProblems.includes(prob.id);
+                          return (
+                            <label
+                              key={prob.id}
+                              className="flex items-center justify-between p-2.5 hover:bg-muted/30 cursor-pointer select-none text-xs"
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setEditingPatternSelectedProblems((prev) => [...prev, prob.id]);
+                                    } else {
+                                      setEditingPatternSelectedProblems((prev) => prev.filter((id) => id !== prob.id));
+                                    }
+                                  }}
+                                  className="rounded border-input text-primary focus:ring-primary h-4 w-4"
+                                />
+                                <span className="font-semibold text-foreground truncate">{prob.title}</span>
+                                <Badge variant={prob.difficulty === "EASY" ? "easy" : "medium"} className="text-[10px]">
+                                  {prob.difficulty}
+                                </Badge>
+                              </div>
+                              <span className="text-[11px] font-mono text-muted-foreground shrink-0">{prob.platform || "LeetCode"}</span>
+                            </label>
+                          );
+                        })
+                      ) : (
+                        <div className="p-4 text-center text-xs text-muted-foreground">
+                          No problems available in database. Create problems in Problems tab first.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </TabsContent>
+
+                {/* TAB 3: Code Templates */}
+                <TabsContent value="code" className="space-y-3">
+                  <div className="flex items-center justify-between pb-2 border-b border-border/60">
+                    <div className="flex items-center gap-1.5">
+                      <Code2 className="h-4 w-4 text-primary" />
+                      <span className="font-semibold text-foreground">Language Code Templates</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {(["python", "cpp", "java", "javascript"] as const).map((lang) => (
+                        <Button
+                          key={lang}
+                          type="button"
+                          size="sm"
+                          variant={templateLangTab === lang ? "default" : "outline"}
+                          onClick={() => setTemplateLangTab(lang)}
+                          className="text-xs h-7 uppercase font-mono px-3"
+                        >
+                          {lang}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-border bg-muted/20 p-3 space-y-2">
+                    <div className="flex items-center justify-between text-xs text-muted-foreground font-mono">
+                      <span>{templateLangTab.toUpperCase()} Implementation Template</span>
+                      <span className="text-[11px] text-muted-foreground/60">Monospace Editor</span>
+                    </div>
+                    {templateLangTab === "python" && (
+                      <Textarea
+                        rows={12}
+                        className="font-mono text-xs bg-background text-foreground leading-relaxed resize-y border-border"
+                        placeholder="# Python solution template..."
+                        value={editingPattern.pyTemplate || ""}
+                        onChange={(e) => setEditingPattern({ ...editingPattern, pyTemplate: e.target.value })}
+                      />
+                    )}
+                    {templateLangTab === "cpp" && (
+                      <Textarea
+                        rows={12}
+                        className="font-mono text-xs bg-background text-foreground leading-relaxed resize-y border-border"
+                        placeholder="// C++ solution template..."
+                        value={editingPattern.cppTemplate || ""}
+                        onChange={(e) => setEditingPattern({ ...editingPattern, cppTemplate: e.target.value })}
+                      />
+                    )}
+                    {templateLangTab === "java" && (
+                      <Textarea
+                        rows={12}
+                        className="font-mono text-xs bg-background text-foreground leading-relaxed resize-y border-border"
+                        placeholder="// Java solution template..."
+                        value={editingPattern.javaTemplate || ""}
+                        onChange={(e) => setEditingPattern({ ...editingPattern, javaTemplate: e.target.value })}
+                      />
+                    )}
+                    {templateLangTab === "javascript" && (
+                      <Textarea
+                        rows={12}
+                        className="font-mono text-xs bg-background text-foreground leading-relaxed resize-y border-border"
+                        placeholder="// JavaScript / TypeScript solution template..."
+                        value={editingPattern.jsTemplate || ""}
+                        onChange={(e) => setEditingPattern({ ...editingPattern, jsTemplate: e.target.value })}
+                      />
                     )}
                   </div>
-                </div>
-              </div>
+                </TabsContent>
+              </Tabs>
 
               <div className="flex items-center justify-end gap-2 pt-3 border-t border-border shrink-0">
                 <Button

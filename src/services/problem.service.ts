@@ -27,7 +27,10 @@ export async function getProblemById(id: string) {
 // ---- Admin ----
 
 interface ProblemInput {
-  title: string; platform?: string; externalId?: string; solveUrl: string;
+  title: string;
+  platform?: string | null;
+  externalId?: string | null;
+  solveUrl: string;
   difficulty?: "EASY" | "MEDIUM" | "HARD";
 }
 

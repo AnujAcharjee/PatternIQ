@@ -44,18 +44,29 @@ export async function adminGetTopic(id: string) {
 }
 
 export async function adminCreateTopic(data: {
-  name: string; description?: string; icon?: string; order?: number; published?: boolean;
+  name: string;
+  description?: string | null;
+  icon?: string | null;
+  order?: number;
+  published?: boolean;
 }) {
   const slug = await uniqueTopicSlug(data.name);
   return prisma.topic.create({ data: { ...data, slug } });
 }
 
 export async function adminUpdateTopic(id: string, data: Partial<{
-  name: string; description?: string; icon?: string; order?: number; published?: boolean;
+  name: string;
+  description?: string | null;
+  icon?: string | null;
+  order?: number;
+  published?: boolean;
 }>) {
-  await adminGetTopic(id);
+  const existing = await adminGetTopic(id);
   const updateData: Record<string, unknown> = { ...data };
-  if (data.name) updateData.slug = await uniqueTopicSlug(data.name);
+  if (data.name && data.name !== existing.name) {
+    updateData.name = data.name;
+    updateData.slug = await uniqueTopicSlug(data.name);
+  }
   return prisma.topic.update({ where: { id }, data: updateData });
 }
 

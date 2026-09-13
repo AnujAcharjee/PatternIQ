@@ -28,8 +28,8 @@ export const createProblemSchema = z.object({
 
 export const updateProblemSchema = z.object({
   title: z.string().min(2).max(200).optional(),
-  platform: z.string().max(50).optional(),
-  externalId: z.string().max(100).optional(),
+  platform: z.string().max(50).nullable().optional(),
+  externalId: z.string().max(100).nullable().optional(),
   solveUrl: solveUrlSchema.optional(),
   difficulty: z.enum(["EASY", "MEDIUM", "HARD"]).optional(),
 });

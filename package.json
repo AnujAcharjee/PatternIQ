@@ -14,7 +14,6 @@
     "prisma:seed": "tsx --env-file=.env prisma/seed.ts"
   },
   "dependencies": {
-    "@anuj304/pramaan": "^1.0.0",
     "@base-ui/react": "^1.7.0",
     "@google/generative-ai": "^0.24.1",
     "@prisma/client": "^5.18.0",

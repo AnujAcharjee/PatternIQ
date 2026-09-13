@@ -8,7 +8,6 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Brain, ArrowRight, Loader2, AlertCircle, Lock } from "lucide-react";
-import { PramaanButton } from "@/components/auth/pramaan-button";
 
 function formatAuthError(rawError: string | null | undefined): string | null {
   if (!rawError) return null;
@@ -143,10 +142,6 @@ function RegisterForm() {
                   </>
                 )}
               </Button>
-
-              <div className="flex justify-center pt-2">
-                <PramaanButton redirect={redirect} mode="signup" />
-              </div>
             </CardContent>
             <CardFooter className="flex flex-col gap-3 pt-0">
               <p className="text-center text-xs text-muted-foreground">

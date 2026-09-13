@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { apiHandler } from "@/lib/handler";
 import { ok } from "@/lib/api-response";
 import { getProblemById } from "@/services/problem.service";

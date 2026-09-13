@@ -20,10 +20,15 @@ import {
   Table as TableIcon,
   Bot,
   Loader2,
+  Upload,
+  Link as LinkIcon,
+  Check,
+  ImageOff,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FormattedText } from "@/components/ui/formatted-text";
 import { cn, cleanLatexMath } from "@/lib/utils";
+import { normalizeImageUrl, isRawImageUrl } from "@/lib/image-url";
 
 interface FormattedTextareaProps {
   label?: string;
@@ -312,13 +317,19 @@ export function FormattedTextarea({
   category,
 }: FormattedTextareaProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [showImageUrlInput, setShowImageUrlInput] = useState(false);
+  const [imageInsertMode, setImageInsertMode] = useState<"url" | "upload">("url");
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [showDiagramModal, setShowDiagramModal] = useState(false);
   const [customDiagramDesc, setCustomDiagramDesc] = useState("");
   const [isGeneratingDiagram, setIsGeneratingDiagram] = useState(false);
   const [imageUrl, setImageUrl] = useState("");
   const [imageAlt, setImageAlt] = useState("");
+  const [extractedWebImages, setExtractedWebImages] = useState<string[]>([]);
+  const [isExtractingWebImages, setIsExtractingWebImages] = useState(false);
+  const [extractedPageTitle, setExtractedPageTitle] = useState("");
   const [toast, setToast] = useState<"applied" | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const diagramPresets = getRelevantDiagramPresets(category);
@@ -450,9 +461,9 @@ export function FormattedTextarea({
 
   const insertImage = (url: string, alt: string) => {
     const textarea = textareaRef.current;
-    const targetUrl = url.trim() || "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800";
-    const targetAlt = alt.trim() || "Technical Diagram / System Illustration";
-    const imgMarkdown = `\n![${targetAlt}](${targetUrl})\n`;
+    const cleanUrl = normalizeImageUrl(url.trim()) || "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800";
+    const targetAlt = alt.trim() || "Illustration / Technical Diagram";
+    const imgMarkdown = `\n![${targetAlt}](${cleanUrl})\n`;
 
     if (!textarea) {
       onChange(value + imgMarkdown);
@@ -471,6 +482,89 @@ export function FormattedTextarea({
       textarea.focus();
       textarea.setSelectionRange(start + imgMarkdown.length, start + imgMarkdown.length);
     }, 10);
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingImage(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/v1/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (data.success && data.data?.url) {
+        setImageUrl(data.data.url);
+        if (!imageAlt) {
+          const autoName = file.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ");
+          setImageAlt(autoName);
+        }
+        showToast("applied");
+      } else {
+        // Fallback to FileReader base64 if server upload endpoint fails
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          if (event.target?.result) {
+            setImageUrl(event.target.result as string);
+            if (!imageAlt) {
+              const autoName = file.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ");
+              setImageAlt(autoName);
+            }
+          }
+        };
+        reader.readAsDataURL(file);
+      }
+    } catch {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          setImageUrl(event.target.result as string);
+        }
+      };
+      reader.readAsDataURL(file);
+    } finally {
+      setIsUploadingImage(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handleExtractFromWebpage = async (urlToExtract: string) => {
+    const raw = urlToExtract.trim();
+    if (!raw || !raw.startsWith("http")) return;
+    if (isRawImageUrl(raw) && !raw.includes("/blogs/") && !raw.includes("/article") && !raw.includes("/post")) return;
+
+    setIsExtractingWebImages(true);
+    try {
+      const res = await fetch("/api/v1/extract-images", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: raw }),
+      });
+      const data = await res.json();
+      if (data.success && data.data) {
+        if (data.data.images && data.data.images.length > 0) {
+          setExtractedWebImages(data.data.images);
+          if (data.data.mainImage) {
+            setImageUrl(data.data.mainImage);
+          }
+          if (data.data.title && !imageAlt) {
+            setImageAlt(data.data.title);
+            setExtractedPageTitle(data.data.title);
+          }
+          showToast("applied");
+        }
+      }
+    } catch {
+      // Ignore
+    } finally {
+      setIsExtractingWebImages(false);
+    }
   };
 
   const insertPresetDiagram = (snippet: string) => {
@@ -543,9 +637,34 @@ export function FormattedTextarea({
   };
 
   // ── Smart Paste handler ─────────────────────────────────────────────────
-  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+  const handlePaste = async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    // Check if user pasted an image file directly from clipboard
+    if (e.clipboardData.files && e.clipboardData.files.length > 0) {
+      const file = e.clipboardData.files[0];
+      if (file.type.startsWith("image/")) {
+        e.preventDefault();
+        try {
+          const formData = new FormData();
+          formData.append("file", file);
+          const res = await fetch("/api/v1/upload", { method: "POST", body: formData });
+          const data = await res.json();
+          if (data.success && data.data?.url) {
+            insertImage(data.data.url, "Pasted Diagram");
+            showToast("applied");
+            return;
+          }
+        } catch {
+          // Fallback to normal text paste
+        }
+      }
+    }
+
     let pasted = e.clipboardData.getData("text");
     if (!pasted) return;
+
+    if (pasted.includes("drive.google.com") || pasted.includes("dropbox.com") || pasted.includes("postimg.cc")) {
+      pasted = normalizeImageUrl(pasted);
+    }
 
     const hasLatex = /[\$\\]/.test(pasted);
     if (hasLatex) {
@@ -577,9 +696,20 @@ export function FormattedTextarea({
   };
 
   const hasFormattableContent = !showPreview && value.trim() && detectHasAutoFormattable(value);
+  const isGoogleDriveLink = imageUrl.includes("drive.google.com") || imageUrl.includes("googleusercontent.com");
+  const normalizedPreviewUrl = normalizeImageUrl(imageUrl);
 
   return (
     <div className="space-y-1.5 w-full">
+      {/* Hidden file input for direct image upload */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleFileUpload}
+        className="hidden"
+      />
+
       {/* Label row */}
       <div className="flex items-center justify-between gap-2">
         {label && (
@@ -631,44 +761,241 @@ export function FormattedTextarea({
         </div>
       </div>
 
-      {/* Image URL insertion banner */}
+      {/* ── Rich Picture / Image Insertion Panel ── */}
       {showImageUrlInput && (
-        <div className="flex flex-col sm:flex-row items-center gap-2 p-2.5 rounded-xl border border-primary/30 bg-primary/10 text-xs">
-          <div className="flex items-center gap-1.5 text-primary font-semibold shrink-0">
-            <ImageIcon className="h-4 w-4" />
-            <span>Insert Image:</span>
+        <div className="rounded-2xl border border-emerald-500/40 bg-card p-4 text-xs space-y-3 shadow-lg animate-in fade-in duration-200">
+          <div className="flex items-center justify-between border-b border-border pb-2.5">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-emerald-500/15 text-emerald-500">
+                <ImageIcon className="h-4 w-4" />
+              </div>
+              <div>
+                <span className="font-bold text-foreground text-xs">Insert Picture / Diagram</span>
+                <p className="text-[10px] text-muted-foreground">
+                  Paste Google Drive / Web image link, or upload an image file from your device
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 bg-muted/60 p-0.5 rounded-lg border border-border">
+              <button
+                type="button"
+                onClick={() => setImageInsertMode("url")}
+                className={cn(
+                  "px-2 py-1 rounded-md text-[11px] font-semibold flex items-center gap-1 transition-colors cursor-pointer",
+                  imageInsertMode === "url"
+                    ? "bg-background text-foreground shadow-xs"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <LinkIcon className="h-3 w-3" />
+                <span>Web / Drive Link</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setImageInsertMode("upload")}
+                className={cn(
+                  "px-2 py-1 rounded-md text-[11px] font-semibold flex items-center gap-1 transition-colors cursor-pointer",
+                  imageInsertMode === "upload"
+                    ? "bg-background text-foreground shadow-xs"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Upload className="h-3 w-3" />
+                <span>Upload File</span>
+              </button>
+            </div>
           </div>
-          <input
-            type="url"
-            placeholder="Image URL (e.g. https://images.unsplash.com/...)"
-            value={imageUrl}
-            onChange={(e) => setImageUrl(e.target.value)}
-            className="flex-1 h-8 px-2.5 rounded-lg border border-border bg-background text-xs"
-          />
-          <input
-            type="text"
-            placeholder="Caption / Description"
-            value={imageAlt}
-            onChange={(e) => setImageAlt(e.target.value)}
-            className="w-full sm:w-48 h-8 px-2.5 rounded-lg border border-border bg-background text-xs"
-          />
-          <div className="flex items-center gap-1.5 shrink-0">
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => insertImage(imageUrl, imageAlt)}
-              className="h-8 text-xs cursor-pointer"
-            >
-              Insert
-            </Button>
+
+          {imageInsertMode === "url" ? (
+            <div className="space-y-2">
+              <div className="flex flex-col sm:flex-row gap-2">
+                <div className="relative flex-1">
+                  <input
+                    type="url"
+                    placeholder="Paste image or blog article link (e.g. https://data-flair.training/blogs/... or direct image)..."
+                    value={imageUrl}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setImageUrl(val);
+                      if (val.startsWith("http") && (val.includes("/blog") || val.includes("/article") || !val.match(/\.(png|jpg|jpeg|webp|gif|svg)/i))) {
+                        handleExtractFromWebpage(val);
+                      }
+                    }}
+                    onBlur={() => {
+                      if (imageUrl.startsWith("http") && !isRawImageUrl(imageUrl)) {
+                        handleExtractFromWebpage(imageUrl);
+                      }
+                    }}
+                    className="w-full h-9 px-3 pr-20 rounded-xl border border-border bg-background text-xs focus:ring-1 focus:ring-primary focus:outline-none"
+                  />
+                  {imageUrl.startsWith("http") && (
+                    <button
+                      type="button"
+                      onClick={() => handleExtractFromWebpage(imageUrl)}
+                      disabled={isExtractingWebImages}
+                      className="absolute right-1 top-1 h-7 px-2.5 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary text-[10px] font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                    >
+                      {isExtractingWebImages ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                      <span>{isExtractingWebImages ? "Scanning..." : "Scan Page"}</span>
+                    </button>
+                  )}
+                </div>
+                <input
+                  type="text"
+                  placeholder="Caption / Description"
+                  value={imageAlt}
+                  onChange={(e) => setImageAlt(e.target.value)}
+                  className="w-full sm:w-56 h-9 px-3 rounded-xl border border-border bg-background text-xs focus:ring-1 focus:ring-primary focus:outline-none"
+                />
+              </div>
+
+              {isExtractingWebImages && (
+                <div className="flex items-center gap-2 text-[11px] text-primary bg-primary/10 px-3 py-2 rounded-xl border border-primary/20 animate-pulse">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
+                  <span>Scanning webpage &amp; extracting diagrams/pictures from the article...</span>
+                </div>
+              )}
+
+              {extractedWebImages.length > 0 && (
+                <div className="space-y-1.5 bg-muted/30 p-2.5 rounded-xl border border-border">
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="font-bold text-foreground flex items-center gap-1.5">
+                      <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+                      <span>Found {extractedWebImages.length} diagrams in this article (click to choose):</span>
+                    </span>
+                    {extractedPageTitle && (
+                      <span className="text-[10px] text-muted-foreground truncate max-w-[200px] font-medium">
+                        {extractedPageTitle}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex gap-2 overflow-x-auto py-1.5 pr-1">
+                    {extractedWebImages.map((imgSrc, iIdx) => {
+                      const isSelected = imageUrl === imgSrc;
+                      return (
+                        <button
+                          key={iIdx}
+                          type="button"
+                          onClick={() => setImageUrl(imgSrc)}
+                          className={cn(
+                            "relative h-16 w-24 shrink-0 rounded-lg overflow-hidden border-2 transition-all p-0.5 bg-black/10 cursor-pointer",
+                            isSelected
+                              ? "border-emerald-500 ring-2 ring-emerald-500/30 shadow-md scale-105"
+                              : "border-border/80 hover:border-primary/50 opacity-70 hover:opacity-100"
+                          )}
+                        >
+                          <img
+                            src={imgSrc}
+                            alt={`Extracted ${iIdx + 1}`}
+                            referrerPolicy="no-referrer"
+                            crossOrigin="anonymous"
+                            className="h-full w-full object-contain rounded"
+                          />
+                          {isSelected && (
+                            <div className="absolute top-1 right-1 bg-emerald-500 text-white rounded-full p-0.5 shadow-xs">
+                              <Check className="h-2.5 w-2.5" />
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {isGoogleDriveLink && (
+                <div className="flex items-center gap-1.5 text-[10px] text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-1.5 rounded-lg border border-emerald-500/20">
+                  <Check className="h-3.5 w-3.5 shrink-0" />
+                  <span>
+                    Google Drive link detected! Auto-converted to direct stream (ensure sharing is set to <em>&ldquo;Anyone with link can view&rdquo;</em>).
+                  </span>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <div className="flex flex-col sm:flex-row items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploadingImage}
+                  className="w-full sm:w-auto h-9 px-4 rounded-xl bg-muted hover:bg-muted/80 text-foreground font-semibold flex items-center justify-center gap-2 border border-border transition-colors cursor-pointer"
+                >
+                  {isUploadingImage ? (
+                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                  ) : (
+                    <Upload className="h-4 w-4 text-emerald-500" />
+                  )}
+                  <span>{isUploadingImage ? "Uploading image..." : "Choose Image File from Computer"}</span>
+                </button>
+                <input
+                  type="text"
+                  placeholder="Caption / Description"
+                  value={imageAlt}
+                  onChange={(e) => setImageAlt(e.target.value)}
+                  className="flex-1 h-9 px-3 rounded-xl border border-border bg-background text-xs focus:ring-1 focus:ring-primary focus:outline-none"
+                />
+              </div>
+              {imageUrl && (
+                <div className="text-[10px] text-muted-foreground truncate font-mono bg-muted/40 px-2.5 py-1 rounded-lg border border-border">
+                  Ready to insert: {imageUrl}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Live Thumbnail Preview */}
+          {imageUrl.trim() && (
+            <div className="p-2.5 rounded-xl border border-border bg-muted/20 space-y-1.5">
+              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">
+                Live Preview:
+              </span>
+              <div className="relative max-h-48 overflow-hidden rounded-lg bg-black/10 dark:bg-black/40 flex items-center justify-center p-1">
+                <img
+                  src={
+                    normalizedPreviewUrl.startsWith("http") && !isRawImageUrl(normalizedPreviewUrl)
+                      ? `/api/v1/image-proxy?url=${encodeURIComponent(normalizedPreviewUrl)}`
+                      : normalizedPreviewUrl
+                  }
+                  alt={imageAlt || "Preview"}
+                  referrerPolicy="no-referrer"
+                  crossOrigin="anonymous"
+                  className="max-h-44 w-auto object-contain rounded-md shadow-xs"
+                  onError={(e) => {
+                    const target = e.currentTarget;
+                    if (!target.src.includes("/api/v1/image-proxy")) {
+                      target.src = `/api/v1/image-proxy?url=${encodeURIComponent(normalizedPreviewUrl)}`;
+                    }
+                  }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Action buttons */}
+          <div className="flex items-center justify-end gap-2 pt-1">
             <Button
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => setShowImageUrlInput(false)}
+              onClick={() => {
+                setShowImageUrlInput(false);
+                setImageUrl("");
+                setImageAlt("");
+              }}
               className="h-8 text-xs cursor-pointer"
             >
               Cancel
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              disabled={!imageUrl.trim() || isUploadingImage}
+              onClick={() => insertImage(imageUrl, imageAlt)}
+              className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 cursor-pointer"
+            >
+              <Check className="h-3.5 w-3.5" />
+              <span>Insert Picture</span>
             </Button>
           </div>
         </div>

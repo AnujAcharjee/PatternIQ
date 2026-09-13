@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { MermaidDiagram } from "@/components/ui/mermaid-diagram";
+import { normalizeImageUrl, getFallbackImageUrls, isRawImageUrl } from "@/lib/image-url";
 import {
   ArrowRight,
   CheckCircle2,
@@ -16,12 +17,198 @@ import {
   X,
   Layers,
   Table as TableIcon,
+  ExternalLink,
+  RefreshCw,
+  ImageOff,
 } from "lucide-react";
 
 interface FormattedTextProps {
   content?: string | null;
   className?: string;
 }
+
+// ─── Robust Formatted Image Component ─────────────────────────────────────────
+
+interface FormattedImageItemProps {
+  src: string;
+  alt: string;
+  isStandalone?: boolean;
+  onExpand?: (src: string, alt: string) => void;
+}
+
+function FormattedImageItem({
+  src: rawSrc,
+  alt: rawAlt,
+  isStandalone = false,
+  onExpand,
+}: FormattedImageItemProps) {
+  const normalizedInitial = normalizeImageUrl(rawSrc);
+  const [currentSrc, setCurrentSrc] = useState(normalizedInitial);
+  const [fallbackIndex, setFallbackIndex] = useState(0);
+  const [hasError, setHasError] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fallbacks = getFallbackImageUrls(rawSrc);
+  const alt = rawAlt || "Illustration / Technical Diagram";
+
+  useEffect(() => {
+    const updated = normalizeImageUrl(rawSrc);
+    setCurrentSrc(updated);
+    setFallbackIndex(0);
+    setHasError(false);
+    setIsLoading(true);
+  }, [rawSrc]);
+
+  const handleImageError = () => {
+    if (fallbackIndex < fallbacks.length) {
+      const nextFallback = fallbacks[fallbackIndex];
+      setFallbackIndex((prev) => prev + 1);
+      setCurrentSrc(nextFallback);
+    } else if (!currentSrc.includes("/api/v1/image-proxy") && (rawSrc.startsWith("http://") || rawSrc.startsWith("https://"))) {
+      setCurrentSrc(`/api/v1/image-proxy?url=${encodeURIComponent(rawSrc)}`);
+    } else {
+      setIsLoading(false);
+      setHasError(true);
+    }
+  };
+
+  const handleImageLoad = () => {
+    setIsLoading(false);
+    setHasError(false);
+  };
+
+  if (hasError) {
+    return (
+      <div
+        className={cn(
+          "rounded-2xl border border-destructive/30 bg-destructive/5 p-4 my-3 text-xs transition-all",
+          isStandalone ? "w-full max-w-xl mx-auto" : "inline-block w-full"
+        )}
+      >
+        <div className="flex items-start gap-3">
+          <div className="p-2 rounded-xl bg-destructive/10 text-destructive shrink-0 mt-0.5">
+            <ImageOff className="h-4 w-4" />
+          </div>
+          <div className="flex-1 space-y-1">
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-semibold text-foreground">{alt}</span>
+              <span className="text-[10px] text-destructive font-mono uppercase font-bold">Image load error</span>
+            </div>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              Unable to preview this image directly. If using <strong>Google Drive</strong>, ensure the link sharing is set to{" "}
+              <em>&ldquo;Anyone with the link can view&rdquo;</em>, or upload the file directly.
+            </p>
+            <div className="flex items-center gap-2 pt-1.5 flex-wrap">
+              <a
+                href={rawSrc}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-muted text-foreground hover:text-primary hover:bg-muted/80 text-[11px] font-medium border border-border transition-colors"
+              >
+                <span>Open original link</span>
+                <ExternalLink className="h-3 w-3" />
+              </a>
+              <button
+                type="button"
+                onClick={() => {
+                  setHasError(false);
+                  setIsLoading(true);
+                  setFallbackIndex(0);
+                  setCurrentSrc(normalizeImageUrl(rawSrc) + (rawSrc.includes("?") ? "&" : "?") + `t=${Date.now()}`);
+                }}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 text-[11px] font-medium border border-primary/20 transition-colors cursor-pointer"
+              >
+                <RefreshCw className="h-3 w-3" />
+                <span>Retry</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isStandalone) {
+    return (
+      <div className="my-4 group">
+        <div
+          className="relative overflow-hidden rounded-2xl border border-border/80 bg-card p-2 shadow-md cursor-pointer transition-all hover:border-primary/40 hover:shadow-lg"
+          onClick={() => onExpand && onExpand(currentSrc, alt)}
+        >
+          <div className="relative min-h-[140px] max-h-[500px] overflow-hidden rounded-xl bg-black/5 dark:bg-black/40 flex items-center justify-center">
+            {isLoading && (
+              <div className="absolute inset-0 flex items-center justify-center bg-muted/40 animate-pulse">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <ImageIcon className="h-4 w-4 animate-bounce text-primary" />
+                  <span>Loading image...</span>
+                </div>
+              </div>
+            )}
+            <img
+              src={currentSrc}
+              alt={alt}
+              referrerPolicy="no-referrer"
+              crossOrigin="anonymous"
+              onError={handleImageError}
+              onLoad={handleImageLoad}
+              className={cn(
+                "w-full h-auto max-h-[500px] object-contain rounded-xl transition-all duration-300",
+                isLoading ? "opacity-0 scale-95" : "opacity-100 scale-100"
+              )}
+            />
+            {!isLoading && (
+              <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-sm p-1.5 rounded-lg text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                <Maximize2 className="h-4 w-4" />
+              </div>
+            )}
+          </div>
+          {alt && (
+            <div className="flex items-center gap-2 pt-2.5 px-2 text-xs text-muted-foreground font-medium">
+              <ImageIcon className="h-3.5 w-3.5 text-primary shrink-0" />
+              <span className="truncate">{alt}</span>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Inline Image
+  return (
+    <span
+      className="inline-block my-2 cursor-pointer group align-middle max-w-full"
+      onClick={() => onExpand && onExpand(currentSrc, alt)}
+    >
+      <span className="relative block overflow-hidden rounded-xl border border-border bg-muted/20 shadow-sm transition-all group-hover:scale-[1.01] group-hover:shadow-md">
+        {isLoading && (
+          <span className="flex items-center justify-center p-6 text-xs text-muted-foreground gap-1.5">
+            <ImageIcon className="h-3.5 w-3.5 animate-bounce text-primary" />
+            <span>Loading...</span>
+          </span>
+        )}
+        <img
+          src={currentSrc}
+          alt={alt}
+          referrerPolicy="no-referrer"
+          crossOrigin="anonymous"
+          onError={handleImageError}
+          onLoad={handleImageLoad}
+          className={cn(
+            "max-h-80 w-auto object-cover rounded-xl transition-all duration-300",
+            isLoading ? "opacity-0" : "opacity-100"
+          )}
+        />
+      </span>
+      {alt && (
+        <span className="block text-[10px] text-muted-foreground italic mt-1 text-center truncate max-w-xs">
+          {alt}
+        </span>
+      )}
+    </span>
+  );
+}
+
+// ─── Main FormattedText ────────────────────────────────────────────────────────
 
 export function FormattedText({ content, className }: FormattedTextProps) {
   const [selectedImage, setSelectedImage] = useState<{ src: string; alt: string } | null>(null);
@@ -72,11 +259,11 @@ export function FormattedText({ content, className }: FormattedTextProps) {
 
   const processedContent = normalizePastedContent(content);
 
-  // Helper to parse inline tags: **bold**, <b>bold</b>, <u>underline</u>, __underline__, *italic*, `code`, images
+  // Helper to parse inline tags: **bold**, <b>bold</b>, <u>underline</u>, __underline__, *italic*, `code`, images, HTML img
   const parseInline = (text: string): React.ReactNode => {
     if (!text) return null;
 
-    const regex = /(\*\*.*?\*\*|<b>.*?<\/b>|<u>.*?<\/u>|__.*?__|`.*?`|\*.*?\*|!\[.*?\]\(.*?\))/g;
+    const regex = /(\*\*.*?\*\*|<b>.*?<\/b>|<u>.*?<\/u>|__.*?__|`.*?`|\*.*?\*|!\[.*?\]\(.*?\)|<img\s+[^>]*>)/g;
     const tokens = text.split(regex);
 
     return tokens.map((token, idx) => {
@@ -86,23 +273,35 @@ export function FormattedText({ content, className }: FormattedTextProps) {
       if (token.startsWith("![") && token.includes("](") && token.endsWith(")")) {
         const altMatch = token.match(/!\[(.*?)\]\((.*?)\)/);
         if (altMatch) {
-          const alt = altMatch[1] || "Article diagram / image";
+          const alt = altMatch[1] || "Illustration / diagram";
           const src = altMatch[2];
           return (
-            <span
-              key={idx}
-              className="inline-block my-2 cursor-pointer group"
-              onClick={() => setSelectedImage({ src, alt })}
-            >
-              <img
-                src={src}
-                alt={alt}
-                className="max-h-80 rounded-xl border border-border bg-muted/20 object-cover shadow-sm transition-all group-hover:scale-[1.01] group-hover:shadow-md"
-              />
-              <span className="block text-[10px] text-muted-foreground italic mt-1 text-center">
-                {alt}
-              </span>
-            </span>
+            <FormattedImageItem
+              key={`inline-img-${idx}`}
+              src={src}
+              alt={alt}
+              isStandalone={false}
+              onExpand={(s, a) => setSelectedImage({ src: s, alt: a })}
+            />
+          );
+        }
+      }
+
+      // Inline HTML Image: <img src="..." alt="..." />
+      if (token.startsWith("<img") && token.endsWith(">")) {
+        const srcMatch = token.match(/src=["'](.*?)["']/i);
+        const altMatch = token.match(/alt=["'](.*?)["']/i);
+        if (srcMatch && srcMatch[1]) {
+          const src = srcMatch[1];
+          const alt = altMatch ? altMatch[1] : "Illustration / diagram";
+          return (
+            <FormattedImageItem
+              key={`inline-html-img-${idx}`}
+              src={src}
+              alt={alt}
+              isStandalone={false}
+              onExpand={(s, a) => setSelectedImage({ src: s, alt: a })}
+            />
           );
         }
       }
@@ -111,10 +310,7 @@ export function FormattedText({ content, className }: FormattedTextProps) {
       if ((token.startsWith("**") && token.endsWith("**")) || (token.startsWith("<b>") && token.endsWith("</b>"))) {
         const inner = token.startsWith("**") ? token.slice(2, -2) : token.slice(3, -4);
         return (
-          <strong
-            key={idx}
-            className="font-extrabold text-foreground bg-primary/10 px-1.5 py-0.5 rounded border border-primary/25 shadow-xs"
-          >
+          <strong key={idx} className="font-bold text-foreground">
             {parseInline(inner)}
           </strong>
         );
@@ -126,7 +322,7 @@ export function FormattedText({ content, className }: FormattedTextProps) {
         return (
           <u
             key={idx}
-            className="underline decoration-primary decoration-2 underline-offset-4 font-semibold text-foreground"
+            className="underline decoration-primary/40 decoration-2 underline-offset-4 font-semibold text-foreground"
           >
             {parseInline(inner)}
           </u>
@@ -139,7 +335,7 @@ export function FormattedText({ content, className }: FormattedTextProps) {
         return (
           <code
             key={idx}
-            className="font-mono text-[11px] bg-muted px-1.5 py-0.5 rounded border border-border text-primary font-bold inline-block my-0.5"
+            className="font-mono text-[11.5px] bg-muted px-1.5 py-0.5 rounded border border-border text-foreground font-semibold inline-block my-0.5"
           >
             {inner}
           </code>
@@ -181,9 +377,9 @@ export function FormattedText({ content, className }: FormattedTextProps) {
                       <span
                         className={cn(
                           "px-2 py-1 rounded-md text-[11px] font-mono transition-colors",
-                          isExtract && "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-bold",
-                          isRemaining && "bg-amber-500/15 text-amber-300 border border-amber-500/30 font-semibold",
-                          !isExtract && !isRemaining && "bg-muted/60 text-foreground border border-border/60"
+                          isExtract && "bg-emerald-500/10 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 font-bold",
+                          isRemaining && "bg-amber-500/10 dark:bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/30 font-semibold",
+                          !isExtract && !isRemaining && "bg-muted/70 text-foreground border border-border"
                         )}
                       >
                         {parseInline(sub)}
@@ -199,7 +395,7 @@ export function FormattedText({ content, className }: FormattedTextProps) {
     );
   };
 
-  // Helper to parse line blocks (Step cards, headings, lists, notes, key-values)
+  // Helper to parse line blocks (Step cards, headings, lists, notes, key-values, images)
   const renderStepRow = (line: string, index: number) => {
     const trimmed = line.trim();
     if (!trimmed) return null;
@@ -235,25 +431,43 @@ export function FormattedText({ content, className }: FormattedTextProps) {
       const alt = standaloneImgMatch[1] || "Diagram / Illustration";
       const src = standaloneImgMatch[2];
       return (
-        <div key={`img-block-${index}`} className="my-4 group">
-          <div
-            className="relative overflow-hidden rounded-2xl border border-border/80 bg-card p-2 shadow-md cursor-pointer transition-all hover:border-primary/40 hover:shadow-lg"
-            onClick={() => setSelectedImage({ src, alt })}
-          >
-            <div className="relative max-h-96 overflow-hidden rounded-xl bg-black/40 flex items-center justify-center">
-              <img src={src} alt={alt} className="w-full h-auto max-h-96 object-contain rounded-xl" />
-              <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-sm p-1.5 rounded-lg text-white opacity-0 group-hover:opacity-100 transition-opacity">
-                <Maximize2 className="h-4 w-4" />
-              </div>
-            </div>
-            {alt && (
-              <div className="flex items-center gap-2 pt-2.5 px-2 text-xs text-muted-foreground font-medium">
-                <ImageIcon className="h-3.5 w-3.5 text-primary shrink-0" />
-                <span>{alt}</span>
-              </div>
-            )}
-          </div>
-        </div>
+        <FormattedImageItem
+          key={`img-block-${index}`}
+          src={src}
+          alt={alt}
+          isStandalone={true}
+          onExpand={(s, a) => setSelectedImage({ src: s, alt: a })}
+        />
+      );
+    }
+
+    // Check if line matches standalone HTML image: <img ... />
+    if (/^<img\s+[^>]*>$/i.test(trimmed)) {
+      const srcMatch = trimmed.match(/src=["'](.*?)["']/i);
+      const altMatch = trimmed.match(/alt=["'](.*?)["']/i);
+      if (srcMatch && srcMatch[1]) {
+        return (
+          <FormattedImageItem
+            key={`img-html-block-${index}`}
+            src={srcMatch[1]}
+            alt={altMatch ? altMatch[1] : "Diagram / Illustration"}
+            isStandalone={true}
+            onExpand={(s, a) => setSelectedImage({ src: s, alt: a })}
+          />
+        );
+      }
+    }
+
+    // Check if line is a raw image URL pasted directly from a website without markdown syntax
+    if (isRawImageUrl(trimmed)) {
+      return (
+        <FormattedImageItem
+          key={`raw-img-${index}`}
+          src={trimmed}
+          alt="Illustration / Technical Diagram"
+          isStandalone={true}
+          onExpand={(s, a) => setSelectedImage({ src: s, alt: a })}
+        />
       );
     }
 
@@ -266,11 +480,11 @@ export function FormattedText({ content, className }: FormattedTextProps) {
       return (
         <div
           key={`step-${index}`}
-          className="group relative my-3 rounded-xl border border-border/80 bg-gradient-to-r from-card via-muted/20 to-primary/5 p-3.5 shadow-xs transition-all hover:border-primary/40 hover:shadow-md"
+          className="group relative my-3 rounded-xl border border-border/80 bg-card p-3.5 shadow-xs transition-all hover:border-primary/40 hover:shadow-sm"
         >
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
             <div className="flex items-center gap-2">
-              <span className="flex h-6 px-2.5 items-center justify-center rounded-md bg-primary text-primary-foreground text-[11px] font-extrabold uppercase tracking-wide font-mono shrink-0 shadow-xs">
+              <span className="flex h-6 px-2.5 items-center justify-center rounded-md bg-primary text-primary-foreground text-[11px] font-bold uppercase tracking-wide font-mono shrink-0 shadow-xs">
                 {stepLabel}
               </span>
             </div>
@@ -293,15 +507,15 @@ export function FormattedText({ content, className }: FormattedTextProps) {
       return (
         <div
           key={`trace-${index}`}
-          className="group relative my-2 rounded-lg border border-border/60 bg-gradient-to-r from-muted/30 via-card to-primary/5 px-3 py-2 shadow-xs transition-all hover:border-primary/30 hover:shadow-sm"
+          className="group relative my-2 rounded-lg border border-border/60 bg-card px-3 py-2 shadow-xs transition-all hover:border-primary/30 hover:shadow-sm"
         >
           <div className="flex flex-wrap items-center gap-2 text-xs font-mono">
             <span
               className={cn(
                 "px-2 py-0.5 rounded-md text-[11px] font-mono font-semibold border",
                 isStopLine
-                  ? "bg-red-500/15 text-red-300 border-red-500/30"
-                  : "bg-muted/60 text-foreground border-border/60"
+                  ? "bg-red-500/10 dark:bg-red-500/15 text-red-700 dark:text-red-300 border-red-500/30"
+                  : "bg-muted/70 text-foreground border-border"
               )}
             >
               {leftSide}
@@ -316,9 +530,9 @@ export function FormattedText({ content, className }: FormattedTextProps) {
                   <span
                     className={cn(
                       "px-2 py-0.5 rounded-md text-[11px] font-mono border",
-                      isPair && "bg-emerald-500/15 text-emerald-400 border-emerald-500/30 font-bold",
-                      isStop && !isPair && "bg-amber-500/15 text-amber-300 border-amber-500/30 font-semibold",
-                      !isPair && !isStop && "bg-primary/10 text-primary border-primary/25 font-semibold"
+                      isPair && "bg-emerald-500/10 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 font-bold",
+                      isStop && !isPair && "bg-amber-500/10 dark:bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-500/30 font-semibold",
+                      !isPair && !isStop && "bg-muted/60 text-foreground border-border font-medium"
                     )}
                   >
                     {rPart}
@@ -335,9 +549,9 @@ export function FormattedText({ content, className }: FormattedTextProps) {
     if (trimmed.startsWith("> ")) {
       const noteText = trimmed.substring(2);
       return (
-        <div key={`note-${index}`} className="my-3 flex items-start gap-2.5 rounded-xl border border-amber-500/30 bg-amber-500/8 px-4 py-3 shadow-xs">
-          <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
-          <span className="text-xs sm:text-sm text-amber-200/90 leading-relaxed font-medium">{parseInline(noteText)}</span>
+        <div key={`note-${index}`} className="my-3 flex items-start gap-2.5 rounded-xl border border-amber-500/25 bg-amber-500/10 dark:bg-amber-500/8 px-4 py-3 shadow-xs">
+          <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+          <span className="text-xs sm:text-sm text-foreground/90 dark:text-amber-200 leading-relaxed font-medium">{parseInline(noteText)}</span>
         </div>
       );
     }
@@ -346,9 +560,9 @@ export function FormattedText({ content, className }: FormattedTextProps) {
     if (trimmed.startsWith("[!NOTE]")) {
       const noteText = trimmed.substring(7).trim();
       return (
-        <div key={`info-${index}`} className="my-3 flex items-start gap-2.5 rounded-xl border border-blue-500/30 bg-blue-500/8 px-4 py-3 shadow-xs">
-          <Info className="h-4 w-4 text-blue-400 shrink-0 mt-0.5" />
-          <span className="text-xs sm:text-sm text-blue-200/90 leading-relaxed font-medium">{parseInline(noteText)}</span>
+        <div key={`info-${index}`} className="my-3 flex items-start gap-2.5 rounded-xl border border-blue-500/25 bg-blue-500/10 dark:bg-blue-500/8 px-4 py-3 shadow-xs">
+          <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+          <span className="text-xs sm:text-sm text-foreground/90 dark:text-blue-200 leading-relaxed font-medium">{parseInline(noteText)}</span>
         </div>
       );
     }
@@ -555,8 +769,14 @@ export function FormattedText({ content, className }: FormattedTextProps) {
 
       {/* Lightbox Image Modal */}
       {selectedImage && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="relative max-w-4xl w-full max-h-[90vh] flex flex-col items-center justify-center">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
+          onClick={() => setSelectedImage(null)}
+        >
+          <div
+            className="relative max-w-4xl w-full max-h-[90vh] flex flex-col items-center justify-center"
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
               type="button"
               onClick={() => setSelectedImage(null)}
@@ -567,6 +787,8 @@ export function FormattedText({ content, className }: FormattedTextProps) {
             <img
               src={selectedImage.src}
               alt={selectedImage.alt}
+              referrerPolicy="no-referrer"
+              crossOrigin="anonymous"
               className="max-h-[80vh] w-auto max-w-full rounded-2xl object-contain shadow-2xl border border-white/10"
             />
             {selectedImage.alt && (

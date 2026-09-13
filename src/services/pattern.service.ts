@@ -55,15 +55,30 @@ export async function getPatternBySlug(slug: string, userId?: string) {
 // ---- Admin ----
 
 interface PatternInput {
-  topicId: string; number: number; name: string; shortDescription?: string;
-  whatIsThis?: string; intuition?: string; identificationSignals?: string; executionRecipe?: string;
-  coreIdea?: string; interviewRule?: string;
-  difficulty?: "EASY" | "MEDIUM" | "HARD"; importance?: number;
-  timeComplexity?: string; spaceComplexity?: string; pseudocode?: string;
-  cppTemplate?: string; javaTemplate?: string; jsTemplate?: string; pyTemplate?: string;
+  topicId: string;
+  number: number;
+  name: string;
+  shortDescription?: string | null;
+  whatIsThis?: string | null;
+  intuition?: string | null;
+  identificationSignals?: string | null;
+  executionRecipe?: string | null;
+  coreIdea?: string | null;
+  interviewRule?: string | null;
+  difficulty?: "EASY" | "MEDIUM" | "HARD";
+  importance?: number;
+  timeComplexity?: string | null;
+  spaceComplexity?: string | null;
+  pseudocode?: string | null;
+  cppTemplate?: string | null;
+  javaTemplate?: string | null;
+  jsTemplate?: string | null;
+  pyTemplate?: string | null;
   status?: "DRAFT" | "PUBLISHED" | "ARCHIVED";
   benchmarkProblemIds?: string[];
-  useCases?: string[]; whenNotToUse?: string[]; warnings?: string[];
+  useCases?: string[];
+  whenNotToUse?: string[];
+  warnings?: string[];
 }
 
 export async function adminListPatterns() {
@@ -80,7 +95,13 @@ export async function adminListPatterns() {
 export async function adminGetPattern(id: string) {
   const pattern = await prisma.pattern.findUnique({
     where: { id },
-    include: { useCases: true, warnings: true, problems: { include: { problem: true } } },
+    include: {
+      topic: { select: { id: true, name: true, slug: true } },
+      useCases: true,
+      warnings: true,
+      problems: { include: { problem: true } },
+      _count: { select: { problems: true } },
+    },
   });
   if (!pattern) throw ApiError.notFound("Pattern not found");
   return pattern;
@@ -122,10 +143,10 @@ export async function adminCreatePattern(input: PatternInput) {
 }
 
 export async function adminUpdatePattern(id: string, input: Partial<PatternInput>) {
-  await adminGetPattern(id);
+  const existing = await adminGetPattern(id);
   const { useCases, whenNotToUse, warnings, benchmarkProblemIds, name, ...rest } = input;
   const data: Record<string, unknown> = { ...rest };
-  if (name) {
+  if (name && name !== existing.name) {
     data.name = name;
     data.slug = await uniquePatternSlug(name);
   }
