@@ -217,14 +217,13 @@ export default function Home() {
         </div>
 
         {/* 3-Card Angled / Floating Showcase Container */}
-        {/* 3-Card Angled / Floating Showcase Container */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-6 items-center justify-center max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-5 items-center justify-center max-w-5xl mx-auto">
           {/* ───────────────────────────────────────────────────────────────── */}
           {/* CARD 1: Sky Blue Top Ribbon & Subtle Small Shadow                 */}
           {/* ───────────────────────────────────────────────────────────────── */}
-          <div className="group h-[510px] rounded-2xl bg-white dark:bg-card border border-border/50 dark:border-border/40 shadow-md dark:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.5),0_0_15px_-3px_rgba(56,189,248,0.12)] hover:shadow-lg dark:hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.7),0_0_22px_-3px_rgba(56,189,248,0.2)] overflow-hidden flex flex-col justify-between transition-all duration-300 lg:-rotate-3 lg:hover:rotate-0 hover:-translate-y-1 origin-bottom-right">
+          <div className="group h-[460px] rounded-2xl bg-white dark:bg-card border border-border/50 dark:border-border/40 shadow-md dark:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.5),0_0_15px_-3px_rgba(56,189,248,0.12)] hover:shadow-lg dark:hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.7),0_0_22px_-3px_rgba(56,189,248,0.2)] overflow-hidden flex flex-col transition-all duration-300 lg:-rotate-2 lg:hover:rotate-0 hover:-translate-y-1 origin-bottom-right">
             {/* Solid Sky Blue Header Banner */}
-            <div className="h-14 flex items-center justify-between bg-[#e0f2fe] dark:bg-[#0f1f2e] px-6 border-b border-sky-200/40 dark:border-sky-900/30">
+            <div className="h-12 flex items-center justify-between bg-[#e0f2fe] dark:bg-[#0f1f2e] px-4 sm:px-5 border-b border-sky-200/40 dark:border-sky-900/30 shrink-0">
               <span className="text-[#0369a1] dark:text-[#38bdf8] font-heading font-bold text-xs uppercase tracking-wider flex items-center gap-2">
                 <BrainCircuit className="h-4 w-4 text-[#0369a1] dark:text-[#38bdf8]" />
                 <span>Know Your Pattern</span>
@@ -235,22 +234,22 @@ export default function Home() {
             </div>
 
             {/* Card Content: All 5 Structured Points */}
-            <div className="p-4 sm:p-5 space-y-2 text-[10.5px] leading-relaxed flex-1 flex flex-col justify-between overflow-hidden">
+            <div className="p-3.5 sm:p-4 flex-1 flex flex-col overflow-hidden text-[10.5px] leading-relaxed">
               <div className="space-y-1.5">
                 {/* 1. Mental Model */}
                 <div className="space-y-0.5">
-                  <div className="flex items-center gap-1 font-heading font-bold text-foreground text-[11px]">
+                  <div className="flex items-center gap-1 font-heading font-bold text-foreground text-[10.5px]">
                     <span className="h-3.5 w-3.5 rounded-full bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center text-[9px]">1</span>
                     <span>Mental Model & Core Intuition</span>
                   </div>
-                  <p className="text-muted-foreground bg-muted/40 p-2 rounded-lg border border-border/40 text-[10.5px]">
+                  <p className="text-muted-foreground bg-muted/40 p-1.5 rounded-lg border border-border/40 text-[10px] leading-tight">
                     Stand at opposite ends of a sorted array. Squeeze inward: sum too small → <code className="text-primary font-bold">left++</code>, sum too big → <code className="text-primary font-bold">right--</code>. Reduces O(N²) to O(N).
                   </p>
                 </div>
 
                 {/* Array Step Simulation */}
-                <div className="rounded-lg bg-slate-950 text-slate-100 p-2 font-mono text-[10px] space-y-0.5 border border-border/20 shadow-inner">
-                  <div className="flex items-center justify-between text-slate-400 text-[9.5px] pb-0.5 border-b border-slate-800 font-sans">
+                <div className="rounded-lg bg-slate-950 text-slate-100 p-1.5 font-mono text-[9.5px] space-y-0.5 border border-border/20 shadow-inner">
+                  <div className="flex items-center justify-between text-slate-400 text-[9px] pb-0.5 border-b border-slate-800 font-sans">
                     <span className="text-sky-400 font-bold font-mono">[1, 2, 4, 6, 8, 11]</span>
                     <span>Target = 10</span>
                   </div>
@@ -261,23 +260,23 @@ export default function Home() {
 
                 {/* 2. Identification Signals */}
                 <div className="space-y-0.5">
-                  <div className="flex items-center gap-1 font-heading font-bold text-foreground text-[11px]">
+                  <div className="flex items-center gap-1 font-heading font-bold text-foreground text-[10.5px]">
                     <span className="h-3.5 w-3.5 rounded-full bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center text-[9px]">2</span>
                     <span>Identification Signals</span>
                   </div>
-                  <div className="text-muted-foreground bg-muted/30 p-1.5 rounded-lg border border-border/30 space-y-0.5 text-[10px]">
+                  <div className="text-muted-foreground bg-muted/30 p-1.5 rounded-lg border border-border/30 space-y-0.5 text-[9.5px]">
                     <p>• <strong>Input:</strong> Sorted array or string (or easily sorted).</p>
                     <p>• <strong>Keywords:</strong> <em>Two Sum II, 3Sum, Container With Most Water, Palindrome</em>.</p>
                   </div>
                 </div>
 
-                {/* 3. Execution Recipe & 4. Interview Rule */}
+                {/* 3. Execution Recipe & Rule */}
                 <div className="space-y-0.5">
-                  <div className="flex items-center gap-1 font-heading font-bold text-foreground text-[11px]">
+                  <div className="flex items-center gap-1 font-heading font-bold text-foreground text-[10.5px]">
                     <span className="h-3.5 w-3.5 rounded-full bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center text-[9px]">3</span>
                     <span>Execution Recipe & Rule</span>
                   </div>
-                  <div className="bg-sky-50/50 dark:bg-sky-950/20 p-2 rounded-lg border border-sky-200/60 dark:border-sky-900/40 text-[10px] space-y-0.5">
+                  <div className="bg-sky-50/50 dark:bg-sky-950/20 p-1.5 rounded-lg border border-sky-200/60 dark:border-sky-900/40 text-[9.5px] space-y-0.5">
                     <p className="font-mono text-slate-700 dark:text-slate-300 font-medium">
                       left = 0, right = N - 1 → while (left &lt; right)
                     </p>
@@ -289,7 +288,7 @@ export default function Home() {
               </div>
 
               {/* Bottom Footer Guarantee */}
-              <div className="pt-2 border-t border-border/40 flex items-center justify-between text-[10px] text-muted-foreground font-medium">
+              <div className="mt-auto pt-2 border-t border-border/40 flex items-center justify-between text-[10px] text-muted-foreground font-medium">
                 <span>Canonical Framework</span>
                 <span className="text-primary font-bold font-mono">100% Deterministic</span>
               </div>
@@ -299,9 +298,9 @@ export default function Home() {
           {/* ───────────────────────────────────────────────────────────────── */}
           {/* CARD 2: Teal / Green Top Ribbon & Subtle Small Shadow             */}
           {/* ───────────────────────────────────────────────────────────────── */}
-          <div className="group h-[510px] rounded-2xl bg-white dark:bg-card border border-border/50 dark:border-border/40 shadow-lg dark:shadow-[0_6px_25px_-4px_rgba(0,0,0,0.6),0_0_18px_-3px_rgba(74,222,128,0.15)] hover:shadow-xl dark:hover:shadow-[0_10px_35px_-4px_rgba(0,0,0,0.75),0_0_25px_-3px_rgba(74,222,128,0.25)] overflow-hidden flex flex-col justify-between transition-all duration-300 z-10 lg:scale-[1.03] lg:-translate-y-1 hover:-translate-y-2">
-            {/* Solid Emerald / Forest Teal Header Banner matching picture */}
-            <div className="h-14 flex items-center justify-between bg-[#d1fae5] dark:bg-[#112520] px-6 border-b border-emerald-200/40 dark:border-emerald-900/30">
+          <div className="group h-[460px] rounded-2xl bg-white dark:bg-card border border-border/50 dark:border-border/40 shadow-lg dark:shadow-[0_6px_25px_-4px_rgba(0,0,0,0.6),0_0_18px_-3px_rgba(74,222,128,0.15)] hover:shadow-xl dark:hover:shadow-[0_10px_35px_-4px_rgba(0,0,0,0.75),0_0_25px_-3px_rgba(74,222,128,0.25)] overflow-hidden flex flex-col transition-all duration-300 z-10 lg:scale-[1.02] lg:-translate-y-1 hover:-translate-y-2">
+            {/* Solid Emerald / Forest Teal Header Banner */}
+            <div className="h-12 flex items-center justify-between bg-[#d1fae5] dark:bg-[#112520] px-4 sm:px-5 border-b border-emerald-200/40 dark:border-emerald-900/30 shrink-0">
               <span className="text-[#065f46] dark:text-[#34d399] font-heading font-bold text-xs uppercase tracking-wider flex items-center gap-2">
                 <Code2 className="h-4 w-4 text-[#065f46] dark:text-[#10b981]" />
                 <span>Pseudocode Blueprint</span>
@@ -312,10 +311,10 @@ export default function Home() {
             </div>
 
             {/* Card Content: Code Viewer */}
-            <div className="p-4 sm:p-5 space-y-2 text-xs flex-1 flex flex-col justify-between overflow-hidden">
+            <div className="p-3.5 sm:p-4 flex-1 flex flex-col overflow-hidden text-xs">
               <div className="space-y-1.5">
                 <div className="flex flex-col space-y-0.5">
-                  <h3 className="font-heading font-extrabold text-base text-foreground tracking-tight">
+                  <h3 className="font-heading font-extrabold text-sm sm:text-base text-foreground tracking-tight">
                     twoSumSorted.algo
                   </h3>
                   <p className="text-[10px] text-muted-foreground leading-tight">
@@ -348,7 +347,7 @@ export default function Home() {
               </div>
 
               {/* Guarantees */}
-              <div className="pt-2 border-t border-border/40 flex items-center justify-between text-[10px] text-muted-foreground">
+              <div className="mt-auto pt-2 border-t border-border/40 flex items-center justify-between text-[10px] text-muted-foreground">
                 <span>Time: <strong className="text-foreground font-mono">O(N)</strong></span>
                 <span>Space: <strong className="text-foreground font-mono">O(1)</strong></span>
                 <span className="font-medium text-foreground">Single Pass Execution</span>
@@ -359,9 +358,9 @@ export default function Home() {
           {/* ───────────────────────────────────────────────────────────────── */}
           {/* CARD 3: Pastel Yellow Top Ribbon & Subtle Small Shadow             */}
           {/* ───────────────────────────────────────────────────────────────── */}
-          <div className="group h-[510px] rounded-2xl bg-white dark:bg-card border border-border/50 dark:border-border/40 shadow-md dark:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.5),0_0_15px_-3px_rgba(250,204,21,0.12)] hover:shadow-lg dark:hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.7),0_0_22px_-3px_rgba(250,204,21,0.2)] overflow-hidden flex flex-col justify-between transition-all duration-300 lg:rotate-3 lg:hover:rotate-0 hover:-translate-y-1 origin-bottom-left">
-            {/* Solid Warm Amber Header Banner matching Card 2 dark style */}
-            <div className="h-14 flex items-center justify-between bg-[#fef3c7] dark:bg-[#221c0e] px-6 border-b border-amber-200/40 dark:border-amber-900/30">
+          <div className="group h-[460px] rounded-2xl bg-white dark:bg-card border border-border/50 dark:border-border/40 shadow-md dark:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.5),0_0_15px_-3px_rgba(250,204,21,0.12)] hover:shadow-lg dark:hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.7),0_0_22px_-3px_rgba(250,204,21,0.2)] overflow-hidden flex flex-col transition-all duration-300 lg:rotate-2 lg:hover:rotate-0 hover:-translate-y-1 origin-bottom-left">
+            {/* Solid Warm Amber Header Banner */}
+            <div className="h-12 flex items-center justify-between bg-[#fef3c7] dark:bg-[#221c0e] px-4 sm:px-5 border-b border-amber-200/40 dark:border-amber-900/30 shrink-0">
               <span className="text-[#b45309] dark:text-[#facc15] font-heading font-bold text-xs uppercase tracking-wider flex items-center gap-2">
                 <Terminal className="h-4 w-4 text-[#b45309] dark:text-[#facc15]" />
                 <span>Production Code</span>
@@ -372,7 +371,7 @@ export default function Home() {
             </div>
 
             {/* Card Content: Language Switcher & CodeViewer */}
-            <div className="p-4 sm:p-5 space-y-2 text-xs flex-1 flex flex-col justify-between overflow-hidden">
+            <div className="p-3.5 sm:p-4 flex-1 flex flex-col overflow-hidden text-xs">
               <div className="space-y-1.5">
                 {/* Language Switcher Tabs Bar */}
                 <div className="flex items-center gap-1 p-0.5 rounded-lg bg-muted/50 border border-border/50">
@@ -408,7 +407,7 @@ export default function Home() {
               </div>
 
               {/* Bottom Action */}
-              <div className="pt-2 border-t border-border/40 flex items-center justify-between gap-2">
+              <div className="mt-auto pt-2 border-t border-border/40 flex items-center justify-between gap-2">
                 <span className="text-[10px] text-muted-foreground">
                   14+ Templates Ready
                 </span>
