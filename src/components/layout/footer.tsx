@@ -53,11 +53,11 @@ export function Footer() {
             {/* Col 1: Brand & Mission */}
             <div className="space-y-4 lg:col-span-4">
               <Link href="/" className="inline-flex items-center gap-2.5 font-bold tracking-tight text-foreground group">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20 transition-transform group-hover:scale-105">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-md shadow-primary/20 transition-transform group-hover:scale-105">
                   <Brain className="h-5 w-5" />
                 </div>
                 <span className="text-2xl font-heading font-extrabold tracking-tight">
-                  Pattern<span className="text-amber-500 font-black">IQ</span>
+                  Pattern<span className="text-primary font-black">IQ</span>
                 </span>
               </Link>
 
@@ -68,7 +68,7 @@ export function Footer() {
               {/* Platform Metrics Row */}
               <div className="flex items-center gap-3 pt-1 text-xs text-muted-foreground">
                 <div className="flex items-center gap-1 font-medium text-foreground">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-amber-500" />
+                  <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
                   <span>14+ Patterns</span>
                 </div>
                 <span>•</span>
@@ -82,30 +82,30 @@ export function Footer() {
             {/* Col 2: Learning Tracks */}
             <div className="space-y-3 lg:col-span-2 sm:pl-2">
               <h4 className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5">
-                <Layers className="h-3.5 w-3.5 text-amber-500" />
+                <Layers className="h-3.5 w-3.5 text-primary" />
                 <span>Pattern Tracks</span>
               </h4>
               <ul className="space-y-2 text-xs text-muted-foreground">
                 <li>
-                  <Link href="/patterns" className="hover:text-amber-500 dark:hover:text-amber-400 transition-colors flex items-center gap-1 group">
+                  <Link href="/patterns" className="hover:text-primary transition-colors flex items-center gap-1 group">
                     <ChevronRight className="h-3 w-3 text-muted-foreground/60 transition-transform group-hover:translate-x-0.5" />
                     <span>Browse All Patterns</span>
                   </Link>
                 </li>
                 <li>
-                  <Link href="/patterns" className="hover:text-amber-500 dark:hover:text-amber-400 transition-colors flex items-center gap-1 group">
+                  <Link href="/patterns" className="hover:text-primary transition-colors flex items-center gap-1 group">
                     <ChevronRight className="h-3 w-3 text-muted-foreground/60 transition-transform group-hover:translate-x-0.5" />
                     <span>Two Pointers &amp; Window</span>
                   </Link>
                 </li>
                 <li>
-                  <Link href="/patterns" className="hover:text-amber-500 dark:hover:text-amber-400 transition-colors flex items-center gap-1 group">
+                  <Link href="/patterns" className="hover:text-primary transition-colors flex items-center gap-1 group">
                     <ChevronRight className="h-3 w-3 text-muted-foreground/60 transition-transform group-hover:translate-x-0.5" />
                     <span>Tree &amp; Graph Traversals</span>
                   </Link>
                 </li>
                 <li>
-                  <Link href="/problems" className="hover:text-amber-500 dark:hover:text-amber-400 transition-colors flex items-center gap-1 group">
+                  <Link href="/problems" className="hover:text-primary transition-colors flex items-center gap-1 group">
                     <ChevronRight className="h-3 w-3 text-muted-foreground/60 transition-transform group-hover:translate-x-0.5" />
                     <span>Curated Problem Catalog</span>
                   </Link>
@@ -116,30 +116,30 @@ export function Footer() {
             {/* Col 3: Practice Suite */}
             <div className="space-y-3 lg:col-span-2">
               <h4 className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5">
-                <Compass className="h-3.5 w-3.5 text-amber-500" />
+                <Compass className="h-3.5 w-3.5 text-primary" />
                 <span>Practice Suite</span>
               </h4>
               <ul className="space-y-2 text-xs text-muted-foreground">
                 <li>
-                  <Link href="/revision" className="hover:text-amber-500 dark:hover:text-amber-400 transition-colors flex items-center gap-1 group">
+                  <Link href="/revision" className="hover:text-primary transition-colors flex items-center gap-1 group">
                     <ChevronRight className="h-3 w-3 text-muted-foreground/60 transition-transform group-hover:translate-x-0.5" />
                     <span>Spaced Repetition</span>
                   </Link>
                 </li>
                 <li>
-                  <Link href="/dashboard" className="hover:text-amber-500 dark:hover:text-amber-400 transition-colors flex items-center gap-1 group">
+                  <Link href="/dashboard" className="hover:text-primary transition-colors flex items-center gap-1 group">
                     <ChevronRight className="h-3 w-3 text-muted-foreground/60 transition-transform group-hover:translate-x-0.5" />
                     <span>Student Dashboard</span>
                   </Link>
                 </li>
                 <li>
-                  <Link href="/articles" className="hover:text-amber-500 dark:hover:text-amber-400 transition-colors flex items-center gap-1 group">
+                  <Link href="/articles" className="hover:text-primary transition-colors flex items-center gap-1 group">
                     <ChevronRight className="h-3 w-3 text-muted-foreground/60 transition-transform group-hover:translate-x-0.5" />
                     <span>Tech Articles</span>
                   </Link>
                 </li>
                 <li>
-                  <Link href="/admin" className="hover:text-amber-500 dark:hover:text-amber-400 transition-colors flex items-center gap-1 group">
+                  <Link href="/admin" className="hover:text-primary transition-colors flex items-center gap-1 group">
                     <ChevronRight className="h-3 w-3 text-muted-foreground/60 transition-transform group-hover:translate-x-0.5" />
                     <span>Admin Studio</span>
                   </Link>
@@ -150,7 +150,7 @@ export function Footer() {
             {/* Col 4: Quick Pattern Pills */}
             <div className="space-y-3 lg:col-span-4">
               <h4 className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5">
-                <BookOpen className="h-3.5 w-3.5 text-amber-500" />
+                <BookOpen className="h-3.5 w-3.5 text-primary" />
                 <span>High-Frequency Patterns</span>
               </h4>
               <p className="text-xs text-muted-foreground leading-relaxed">
@@ -161,7 +161,7 @@ export function Footer() {
                   <Link
                     key={tIdx}
                     href={topic.href}
-                    className="rounded-lg border border-border/80 bg-muted/50 dark:bg-zinc-900/60 hover:bg-amber-500/10 hover:border-amber-500/40 hover:text-amber-500 dark:hover:text-amber-400 px-2.5 py-1 text-[11px] font-medium text-foreground transition-all shadow-2xs"
+                    className="rounded-lg border border-border/80 bg-muted/50 dark:bg-zinc-900/60 hover:bg-primary/10 hover:border-primary/40 hover:text-primary px-2.5 py-1 text-[11px] font-medium text-foreground transition-all shadow-2xs"
                   >
                     #{topic.name}
                   </Link>
@@ -185,7 +185,7 @@ export function Footer() {
                 href="https://github.com/samnatasuvamoy99"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-semibold text-foreground hover:text-amber-500 dark:hover:text-amber-400 transition-colors underline-offset-4 hover:underline ml-0.5"
+                className="font-semibold text-foreground hover:text-primary transition-colors underline-offset-4 hover:underline ml-0.5"
               >
                 Suvamoy
               </a>
@@ -244,9 +244,9 @@ export function Footer() {
               type="button"
               onClick={scrollToTop}
               title="Scroll back to top"
-              className="ml-1 flex h-6 w-6 items-center justify-center rounded-full border border-border bg-card hover:bg-muted hover:border-amber-500/40 text-foreground transition-all cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
+              className="ml-1 flex h-6 w-6 items-center justify-center rounded-full border border-border bg-card hover:bg-muted hover:border-primary/40 text-foreground transition-all cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
             >
-              <ArrowUp className="h-3.5 w-3.5 text-amber-500" />
+              <ArrowUp className="h-3.5 w-3.5 text-primary" />
             </button>
           </div>
         </div>

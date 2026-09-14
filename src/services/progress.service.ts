@@ -57,16 +57,28 @@ export async function startPattern(userId: string, patternId: string) {
 export async function updatePatternStatus(
   userId: string, patternId: string, status: "NOT_STARTED" | "IN_PROGRESS" | "COMPLETED" | "MASTERED"
 ) {
+  const pattern = await prisma.pattern.findUnique({ where: { id: patternId } });
+  if (!pattern) throw ApiError.notFound("Pattern not found");
+
+  const totalProblems = await prisma.patternProblem.count({ where: { patternId } });
   const existing = await prisma.userPatternProgress.findUnique({
     where: { userId_patternId: { userId, patternId } },
   });
-  if (!existing) throw ApiError.notFound("No progress found for this pattern yet");
 
-  return prisma.userPatternProgress.update({
+  return prisma.userPatternProgress.upsert({
     where: { userId_patternId: { userId, patternId } },
-    data: {
+    update: {
       status,
-      completedAt: status === "COMPLETED" || status === "MASTERED" ? new Date() : existing.completedAt,
+      completedAt: status === "COMPLETED" || status === "MASTERED" ? new Date() : existing?.completedAt,
+      startedAt: existing?.startedAt ?? new Date(),
+    },
+    create: {
+      userId,
+      patternId,
+      status,
+      totalProblems,
+      startedAt: new Date(),
+      completedAt: status === "COMPLETED" || status === "MASTERED" ? new Date() : null,
     },
   });
 }

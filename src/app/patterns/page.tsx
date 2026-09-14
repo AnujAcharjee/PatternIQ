@@ -77,33 +77,29 @@ function PatternsContent() {
   // Track expanded topics by slug.
   const [expandedTopics, setExpandedTopics] = useState<Record<string, boolean>>({});
 
-  // 1. Fetch live topics and patterns from API
+  // 1. Fetch live topics, patterns, and user progress from API
   useEffect(() => {
     async function loadData() {
       setIsLoading(true);
       try {
-        const [topicsRes, patternsRes] = await Promise.all([
+        const [topicsRes, patternsRes, progressRes] = await Promise.all([
           apiClient<any[]>("/topics"),
           apiClient<{ items: any[]; pagination: any }>("/patterns?limit=100"),
+          apiClient<any[]>("/progress/patterns").catch(() => ({ success: false, data: [] })),
         ]);
 
-        let loadedTopics: UnifiedTopic[] = [];
-        if (topicsRes.success && Array.isArray(topicsRes.data)) {
-          loadedTopics = topicsRes.data.map((t, idx) => ({
-            id: t.id,
-            name: t.name,
-            slug: t.slug,
-            description: t.description || "",
-            icon: t.icon || "Layers",
-            patternCount: t._count?.patterns || t.patternCount || 0,
-            completedCount: 0,
-            order: t.order || idx + 1,
-          }));
-          setTopics(loadedTopics);
+        const userProgressMap: Record<string, string> = {};
+        if (progressRes.success && Array.isArray(progressRes.data)) {
+          progressRes.data.forEach((item: any) => {
+            if (item.patternId) {
+              userProgressMap[item.patternId] = item.status;
+            }
+          });
         }
 
+        let mappedPatterns: UnifiedPattern[] = [];
         if (patternsRes.success && patternsRes.data?.items) {
-          const mappedPatterns: UnifiedPattern[] = patternsRes.data.items.map((p) => ({
+          mappedPatterns = patternsRes.data.items.map((p) => ({
             id: p.id,
             number: p.number,
             name: p.name,
@@ -117,9 +113,31 @@ function PatternsContent() {
               space: p.spaceComplexity || "O(1)",
             },
             problemsCount: p._count?.problems ?? p.problems?.length ?? 0,
-            status: p.status,
+            status: userProgressMap[p.id] || p.status || "NOT_STARTED",
           }));
           setPatterns(mappedPatterns);
+        }
+
+        let loadedTopics: UnifiedTopic[] = [];
+        if (topicsRes.success && Array.isArray(topicsRes.data)) {
+          loadedTopics = topicsRes.data.map((t, idx) => {
+            const topicPats = mappedPatterns.filter((p) => p.topicSlug === t.slug);
+            const completedCount = topicPats.filter(
+              (p) => userProgressMap[p.id] === "COMPLETED" || userProgressMap[p.id] === "MASTERED"
+            ).length;
+
+            return {
+              id: t.id,
+              name: t.name,
+              slug: t.slug,
+              description: t.description || "",
+              icon: t.icon || "Layers",
+              patternCount: t._count?.patterns || t.patternCount || topicPats.length || 0,
+              completedCount,
+              order: t.order || idx + 1,
+            };
+          });
+          setTopics(loadedTopics);
         }
 
         // Set initial expanded topic
@@ -160,6 +178,10 @@ function PatternsContent() {
       .filter((p) => p.topicSlug === topic.slug)
       .sort((a, b) => a.number - b.number);
 
+    const completedInTopic = topicPats.filter(
+      (p) => p.status === "COMPLETED" || p.status === "MASTERED"
+    ).length;
+
     const filtered = topicPats.filter((pat) => {
       const matchesSearch =
         pat.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -176,6 +198,7 @@ function PatternsContent() {
       ...topic,
       patterns: filtered,
       totalCount: topicPats.length,
+      completedCount: completedInTopic,
     };
   }).filter((topic) => {
     if (!searchTerm) return true;
@@ -363,9 +386,14 @@ function PatternsContent() {
                                     <Badge variant="outline" className="text-[11px] font-mono">
                                       Space: {pat.complexity.space}
                                     </Badge>
-                                    {pat.status === "MASTERED" && (
-                                      <Badge variant="solved" className="text-[11px] gap-1">
-                                        <CheckCircle2 className="h-3 w-3" /> Mastered
+                                    {(pat.status === "COMPLETED" || pat.status === "MASTERED") && (
+                                      <Badge variant="outline" className="text-[11px] gap-1 bg-emerald-500/10 text-emerald-500 border-emerald-500/30">
+                                        <CheckCircle2 className="h-3 w-3" /> Studied
+                                      </Badge>
+                                    )}
+                                    {pat.status === "IN_PROGRESS" && (
+                                      <Badge variant="outline" className="text-[11px] gap-1 bg-blue-500/10 text-blue-500 border-blue-500/30">
+                                        Reading
                                       </Badge>
                                     )}
                                   </div>
@@ -386,8 +414,8 @@ function PatternsContent() {
                                   <ArrowRight className="h-3 w-3" />
                                 </Link>
                                 <Link href={`/patterns/${pat.slug}`}>
-                                  <Button size="sm" className="gap-1.5 text-xs h-8">
-                                    <span>Study Pattern</span>
+                                  <Button size="sm" variant={pat.status === "COMPLETED" || pat.status === "MASTERED" ? "outline" : "default"} className="gap-1.5 text-xs h-8">
+                                    <span>{pat.status === "COMPLETED" || pat.status === "MASTERED" ? "Review Pattern" : "Study Pattern"}</span>
                                     <ArrowRight className="h-3.5 w-3.5" />
                                   </Button>
                                 </Link>

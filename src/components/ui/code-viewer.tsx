@@ -10,6 +10,8 @@ interface CodeViewerProps {
   title?: string;
   className?: string;
   showLineNumbers?: boolean;
+  compact?: boolean;
+  fontSize?: string;
 }
 
 // Tokenize a line of pseudocode for rich syntax highlighting
@@ -102,6 +104,8 @@ export function CodeViewer({
   title,
   className,
   showLineNumbers = true,
+  compact = false,
+  fontSize,
 }: CodeViewerProps) {
   const [copied, setCopied] = useState(false);
 
@@ -117,23 +121,30 @@ export function CodeViewer({
     <div
       className={cn(
         "rounded-xl border border-border/80 bg-[#0d1117] text-[#e6edf3] shadow-lg overflow-hidden font-mono text-xs",
+        compact && "text-[10px] leading-[1.35]",
+        fontSize,
         className
       )}
     >
       {/* Editor Top Bar */}
-      <div className="flex items-center justify-between px-4 py-2.5 bg-[#161b22] border-b border-[#30363d] select-none">
-        <div className="flex items-center gap-2.5">
+      <div
+        className={cn(
+          "flex items-center justify-between bg-[#161b22] border-b border-[#30363d] select-none",
+          compact ? "px-3 py-1.5" : "px-4 py-2.5"
+        )}
+      >
+        <div className="flex items-center gap-2">
           {/* Window dots */}
-          <div className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full bg-[#ff5f56]/90 inline-block" />
-            <span className="h-2.5 w-2.5 rounded-full bg-[#ffbd2e]/90 inline-block" />
-            <span className="h-2.5 w-2.5 rounded-full bg-[#27c93f]/90 inline-block" />
+          <div className="flex items-center gap-1.2">
+            <span className={cn("rounded-full bg-[#ff5f56]/90 inline-block", compact ? "h-2 w-2" : "h-2.5 w-2.5")} />
+            <span className={cn("rounded-full bg-[#ffbd2e]/90 inline-block", compact ? "h-2 w-2" : "h-2.5 w-2.5")} />
+            <span className={cn("rounded-full bg-[#27c93f]/90 inline-block", compact ? "h-2 w-2" : "h-2.5 w-2.5")} />
           </div>
 
-          <div className="h-3.5 w-px bg-border/40 mx-1" />
+          <div className="h-3 w-px bg-border/40 mx-0.5" />
 
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
-            <Terminal className="h-3.5 w-3.5 text-primary" />
+          <div className="flex items-center gap-1 text-[11px] text-muted-foreground font-medium">
+            <Terminal className="h-3 w-3 text-primary" />
             <span className="text-[#8b949e]">
               {title || (language === "pseudocode" ? "pseudocode.algo" : `${language}`)}
             </span>
@@ -145,7 +156,8 @@ export function CodeViewer({
           type="button"
           onClick={handleCopy}
           className={cn(
-            "flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-sans font-medium transition-all cursor-pointer",
+            "flex items-center gap-1 rounded-md font-sans font-medium transition-all cursor-pointer",
+            compact ? "px-2 py-0.5 text-[10px]" : "px-2.5 py-1 text-xs",
             copied
               ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
               : "bg-[#21262d] hover:bg-[#30363d] text-[#c9d1d9] border border-[#30363d] hover:text-white"
@@ -154,25 +166,36 @@ export function CodeViewer({
         >
           {copied ? (
             <>
-              <Check className="h-3.5 w-3.5 text-emerald-400" />
+              <Check className="h-3 w-3 text-emerald-400" />
               <span>Copied!</span>
             </>
           ) : (
             <>
-              <Copy className="h-3.5 w-3.5" />
-              <span>Copy Code</span>
+              <Copy className="h-3 w-3" />
+              <span>Copy</span>
             </>
           )}
         </button>
       </div>
 
       {/* Code Body with Line Numbers & Colorful Syntax */}
-      <div className="p-4 overflow-x-auto leading-relaxed">
-        <div className="min-w-full inline-block">
+      <div className={cn(compact ? "overflow-hidden p-2.5 leading-[1.38]" : "overflow-x-auto p-4 leading-relaxed")}>
+        <div className="w-full inline-block">
           {lines.map((line, idx) => (
-            <div key={idx} className="flex hover:bg-[#161b22]/70 -mx-4 px-4 py-0.5 rounded transition-colors">
+            <div
+              key={idx}
+              className={cn(
+                "flex hover:bg-[#161b22]/70 rounded transition-colors",
+                compact ? "-mx-2 px-2 py-0" : "-mx-4 px-4 py-0.5"
+              )}
+            >
               {showLineNumbers && (
-                <span className="w-8 shrink-0 select-none text-right pr-4 text-[#484f58] font-mono text-[11px]">
+                <span
+                  className={cn(
+                    "shrink-0 select-none text-right text-[#484f58] font-mono",
+                    compact ? "w-5 pr-2 text-[9.5px]" : "w-8 pr-4 text-[11px]"
+                  )}
+                >
                   {idx + 1}
                 </span>
               )}

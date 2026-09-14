@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { CodeViewer } from "@/components/ui/code-viewer";
@@ -27,6 +28,7 @@ import {
   ListOrdered,
   ArrowRight,
   ChevronRight,
+  BookCheck,
 } from "lucide-react";
 
 interface ProblemData {
@@ -84,6 +86,13 @@ export default function PatternDetailPage({ params }: { params: { slug: string }
   const [newNote, setNewNote] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSavingNote, setIsSavingNote] = useState(false);
+  
+  // Reading & Study Progress States
+  const [scrollProgress, setScrollProgress] = useState(0);
+  const [studyStatus, setStudyStatus] = useState<string>("NOT_STARTED");
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [showToast, setShowToast] = useState(false);
+  const hasAutoCompletedRef = useRef(false);
 
   // Fetch live pattern from API
   useEffect(() => {
@@ -125,6 +134,12 @@ export default function PatternDetailPage({ params }: { params: { slug: string }
             };
           });
 
+          const currentStatus = apiData.userProgress?.status || "NOT_STARTED";
+          setStudyStatus(currentStatus);
+          if (currentStatus === "COMPLETED" || currentStatus === "MASTERED") {
+            hasAutoCompletedRef.current = true;
+          }
+
           const mapped: PatternData = {
             id: apiData.id,
             number: apiData.number || 1,
@@ -158,7 +173,7 @@ export default function PatternDetailPage({ params }: { params: { slug: string }
               javascript: apiData.jsTemplate || "// JavaScript implementation coming soon",
             },
             problems: mappedProblems,
-            status: apiData.userProgress?.status || "NOT_STARTED",
+            status: currentStatus,
           };
 
           setPattern(mapped);
@@ -183,6 +198,51 @@ export default function PatternDetailPage({ params }: { params: { slug: string }
 
     loadPattern();
   }, [params.slug]);
+
+  // Track page scroll and auto-update study progress when fully read/scrolled
+  useEffect(() => {
+    if (!pattern) return;
+
+    const handleScroll = () => {
+      const totalScroll = document.documentElement.scrollHeight - window.innerHeight;
+      if (totalScroll <= 0) return;
+      const currentScroll = window.scrollY;
+      const progress = Math.min(100, Math.max(0, Math.round((currentScroll / totalScroll) * 100)));
+      setScrollProgress(progress);
+
+      // Auto-trigger completion when scrolled 75% or more
+      if (progress >= 75 && !hasAutoCompletedRef.current && studyStatus !== "COMPLETED" && studyStatus !== "MASTERED") {
+        hasAutoCompletedRef.current = true;
+        updateStatus("COMPLETED", true);
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [pattern, studyStatus]);
+
+  const updateStatus = async (nextStatus: "NOT_STARTED" | "IN_PROGRESS" | "COMPLETED", isAuto = false) => {
+    if (!pattern) return;
+    setIsUpdatingStatus(true);
+    setStudyStatus(nextStatus);
+    setPattern((prev) => (prev ? { ...prev, status: nextStatus } : null));
+
+    if (nextStatus === "COMPLETED") {
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 4500);
+    }
+
+    try {
+      await apiClient(`/progress/patterns/${pattern.id}/status`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: nextStatus }),
+      });
+    } catch (err) {
+      console.error("Failed to persist pattern study status", err);
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
 
   const toggleProblemStatus = async (problemId: string) => {
     let nextStatus: "SOLVED" | "ATTEMPTED" = "SOLVED";
@@ -238,8 +298,35 @@ export default function PatternDetailPage({ params }: { params: { slug: string }
     }
   };
 
+  const isStudied = studyStatus === "COMPLETED" || studyStatus === "MASTERED";
+
   return (
     <AuthGuard>
+      {/* ── Fixed Reading Progress Bar at Top ── */}
+      <div className="fixed top-0 left-0 right-0 h-1 bg-muted/40 z-50 pointer-events-none">
+        <div
+          className="h-full bg-primary transition-all duration-150"
+          style={{ width: `${isStudied ? 100 : scrollProgress}%` }}
+        />
+      </div>
+
+      {/* ── Floating Study Toast on Auto Completion ── */}
+      {showToast && (
+        <div className="fixed bottom-6 right-6 z-50 max-w-sm rounded-2xl border border-primary/40 bg-card p-4 shadow-xl shadow-black/10 dark:shadow-black/40 backdrop-blur-xl animate-in slide-in-from-bottom-5 duration-300">
+          <div className="flex items-start gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground font-bold">
+              <Sparkles className="h-5 w-5" />
+            </div>
+            <div className="space-y-1 min-w-0">
+              <h4 className="text-sm font-bold text-foreground">Pattern Studied & Completed!</h4>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                You’ve finished reading <strong>{pattern?.name}</strong>. Your curriculum and topic progress have been updated!
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8 space-y-8">
         {/* Back link */}
         <Link href="/patterns" className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground">
@@ -269,7 +356,7 @@ export default function PatternDetailPage({ params }: { params: { slug: string }
             {/* Pattern Hero Header */}
             <div className="rounded-2xl border border-border/80 bg-gradient-to-br from-card via-muted/20 to-primary/5 p-6 sm:p-8 space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-bold">
                     #{pattern.number}
                   </span>
@@ -279,11 +366,52 @@ export default function PatternDetailPage({ params }: { params: { slug: string }
                   <Badge variant="outline">Time: {pattern.complexity.time}</Badge>
                   <Badge variant="outline">Space: {pattern.complexity.space}</Badge>
                 </div>
-                <Link href={`/patterns?topic=${pattern.topicSlug}`}>
-                  <Button variant="outline" size="sm" className="text-xs">
-                    Topic: {pattern.topicName}
+
+                {/* Right: Study Status Indicator & Controls */}
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  {/* Reading Tracker pill */}
+                  <div className="hidden sm:flex items-center gap-2 rounded-lg border border-border/80 bg-background/80 px-3 py-1.5 text-xs shadow-2xs">
+                    {isStudied ? (
+                      <div className="flex items-center gap-1.5 text-emerald-500 font-semibold">
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        <span>Studied (100%)</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <div className="w-16">
+                          <Progress value={scrollProgress} className="h-1.5" />
+                        </div>
+                        <span className="font-mono text-muted-foreground font-medium">
+                          {scrollProgress}% Read
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Manual Mark / Unmark Studied Button */}
+                  <Button
+                    size="sm"
+                    variant={isStudied ? "outline" : "default"}
+                    onClick={() => updateStatus(isStudied ? "NOT_STARTED" : "COMPLETED")}
+                    disabled={isUpdatingStatus}
+                    className="text-xs gap-1.5 h-8 cursor-pointer"
+                  >
+                    {isUpdatingStatus ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : isStudied ? (
+                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                    ) : (
+                      <BookCheck className="h-3.5 w-3.5" />
+                    )}
+                    <span>{isStudied ? "Studied ✓" : "Mark Studied"}</span>
                   </Button>
-                </Link>
+
+                  <Link href={`/patterns?topic=${pattern.topicSlug}`}>
+                    <Button variant="outline" size="sm" className="text-xs h-8">
+                      Topic: {pattern.topicName}
+                    </Button>
+                  </Link>
+                </div>
               </div>
 
               <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-foreground">

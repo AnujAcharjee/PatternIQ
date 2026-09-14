@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
@@ -19,10 +20,98 @@ import {
   Award,
   BookOpen,
   TrendingUp,
+  Terminal,
+  ListOrdered,
 } from "lucide-react";
+
+const TWO_SUM_CODE: Record<string, { code: string; lang: string; title: string }> = {
+  python: {
+    lang: "python",
+    title: "two-sum-sorted.py",
+    code: `def two_sum_sorted(arr: list[int], target: int) -> list[int]:
+    left = 0
+    right = len(arr) - 1
+    
+    while left < right:
+        current_sum = arr[left] + arr[right]
+        
+        if current_sum == target:
+            return [left, right]
+        elif current_sum < target:
+            left += 1       # Need larger sum
+        else:
+            right -= 1      # Need smaller sum
+            
+    return [-1, -1]`,
+  },
+  cpp: {
+    lang: "cpp",
+    title: "two-sum-sorted.cpp",
+    code: `vector<int> twoSumSorted(const vector<int>& arr, int target) {
+    int left = 0;
+    int right = arr.size() - 1;
+    
+    while (left < right) {
+        int currentSum = arr[left] + arr[right];
+        
+        if (currentSum == target) {
+            return {left, right};
+        } else if (currentSum < target) {
+            left++;       // Need larger sum
+        } else {
+            right--;      // Need smaller sum
+        }
+    }
+    return {-1, -1};
+}`,
+  },
+  java: {
+    lang: "java",
+    title: "TwoSumSorted.java",
+    code: `public int[] twoSumSorted(int[] arr, int target) {
+    int left = 0;
+    int right = arr.length - 1;
+    
+    while (left < right) {
+        int currentSum = arr[left] + arr[right];
+        
+        if (currentSum == target) {
+            return new int[] { left, right };
+        } else if (currentSum < target) {
+            left++;       // Need larger sum
+        } else {
+            right--;      // Need smaller sum
+        }
+    }
+    return new int[] { -1, -1 };
+}`,
+  },
+  javascript: {
+    lang: "javascript",
+    title: "two-sum-sorted.js",
+    code: `function twoSumSorted(arr, target) {
+    let left = 0;
+    let right = arr.length - 1;
+    
+    while (left < right) {
+        const currentSum = arr[left] + arr[right];
+        
+        if (currentSum === target) {
+            return [left, right];
+        } else if (currentSum < target) {
+            left++;       // Need larger sum
+        } else {
+            right--;      // Need smaller sum
+        }
+    }
+    return [-1, -1];
+}`,
+  },
+};
 
 export default function Home() {
   const featuredPattern = MOCK_PATTERNS[0];
+  const [activeLanguage, setActiveLanguage] = useState<"python" | "cpp" | "java" | "javascript">("cpp");
 
   return (
     <div className="flex flex-col items-center justify-center">
@@ -112,108 +201,227 @@ export default function Home() {
       </section>
 
       {/* ========================================================================= */}
-      {/* 2. INTERACTIVE PATTERN PREVIEW */}
+      {/* 2. STYLIZED 3-CARD FLOATING PATTERN ARCHITECTURE SHOWCASE */}
       {/* ========================================================================= */}
-      <section className="w-full py-20 px-4 sm:px-6 lg:px-8 max-w-6xl">
-        <div className="text-center mb-12 space-y-2">
-          <Badge variant="outline" className="border-primary/30 text-primary px-3 py-0.5 text-xs font-semibold">
-            How It Works
+      <section className="w-full py-24 px-4 sm:px-6 lg:px-8 max-w-7xl overflow-visible">
+        <div className="text-center mb-16 space-y-3">
+          <Badge variant="outline" className="border-primary/40 bg-primary/10 text-primary px-3.5 py-1 text-xs font-bold tracking-wide uppercase">
+            Pattern Architecture
           </Badge>
-          <h2 className="font-heading text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">
+          <h2 className="font-heading text-3xl sm:text-5xl font-extrabold tracking-tight text-foreground">
             The Anatomy of an Algorithmic Pattern
           </h2>
-          <p className="text-muted-foreground text-sm max-w-xl mx-auto leading-relaxed">
-            Instead of memorizing bespoke solutions, PatternIQ deconstructs every challenge into four core foundational pillars.
+          <p className="text-muted-foreground text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">
+            Deconstruct complex interview problems into intuitive mental models, clean pseudocode, and multi-language production code.
           </p>
         </div>
 
-        <Card className="border-border/80 shadow-xl overflow-hidden bg-card/80 backdrop-blur-sm">
-          <div className="border-b border-border bg-muted/40 p-4 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-primary-foreground font-bold shadow-sm font-mono text-base">
-                #{featuredPattern.number}
-              </div>
-              <div>
-                <h3 className="font-heading font-bold text-xl leading-tight text-foreground">{featuredPattern.name}</h3>
-                <p className="text-xs text-muted-foreground mt-0.5 font-medium">Topic: {featuredPattern.topicName}</p>
-              </div>
+        {/* 3-Card Angled / Floating Showcase Container */}
+        {/* 3-Card Angled / Floating Showcase Container */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-6 items-center justify-center max-w-6xl mx-auto">
+          {/* ───────────────────────────────────────────────────────────────── */}
+          {/* CARD 1: Sky Blue Top Ribbon & Subtle Small Shadow                 */}
+          {/* ───────────────────────────────────────────────────────────────── */}
+          <div className="group h-[510px] rounded-2xl bg-white dark:bg-card border border-border/50 dark:border-border/40 shadow-md dark:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.5),0_0_15px_-3px_rgba(56,189,248,0.12)] hover:shadow-lg dark:hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.7),0_0_22px_-3px_rgba(56,189,248,0.2)] overflow-hidden flex flex-col justify-between transition-all duration-300 lg:-rotate-3 lg:hover:rotate-0 hover:-translate-y-1 origin-bottom-right">
+            {/* Solid Sky Blue Header Banner */}
+            <div className="h-14 flex items-center justify-between bg-[#e0f2fe] dark:bg-[#0f1f2e] px-6 border-b border-sky-200/40 dark:border-sky-900/30">
+              <span className="text-[#0369a1] dark:text-[#38bdf8] font-heading font-bold text-xs uppercase tracking-wider flex items-center gap-2">
+                <BrainCircuit className="h-4 w-4 text-[#0369a1] dark:text-[#38bdf8]" />
+                <span>Know Your Pattern</span>
+              </span>
+              <Badge variant="easy" className="text-[10px] px-2 py-0.2 font-bold bg-[#0369a1]/10 dark:bg-[#38bdf8]/15 text-[#0369a1] dark:text-[#38bdf8] border border-sky-600/10 dark:border-sky-400/20">
+                EASY • O(N)
+              </Badge>
             </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <Badge variant="easy">EASY</Badge>
-              <Badge variant="outline" className="font-mono text-[11px]">Time: {featuredPattern.complexity.time}</Badge>
-              <Badge variant="outline" className="font-mono text-[11px]">Space: {featuredPattern.complexity.space}</Badge>
+
+            {/* Card Content: All 5 Structured Points */}
+            <div className="p-4 sm:p-5 space-y-2 text-[10.5px] leading-relaxed flex-1 flex flex-col justify-between overflow-hidden">
+              <div className="space-y-1.5">
+                {/* 1. Mental Model */}
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-1 font-heading font-bold text-foreground text-[11px]">
+                    <span className="h-3.5 w-3.5 rounded-full bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center text-[9px]">1</span>
+                    <span>Mental Model & Core Intuition</span>
+                  </div>
+                  <p className="text-muted-foreground bg-muted/40 p-2 rounded-lg border border-border/40 text-[10.5px]">
+                    Stand at opposite ends of a sorted array. Squeeze inward: sum too small → <code className="text-primary font-bold">left++</code>, sum too big → <code className="text-primary font-bold">right--</code>. Reduces O(N²) to O(N).
+                  </p>
+                </div>
+
+                {/* Array Step Simulation */}
+                <div className="rounded-lg bg-slate-950 text-slate-100 p-2 font-mono text-[10px] space-y-0.5 border border-border/20 shadow-inner">
+                  <div className="flex items-center justify-between text-slate-400 text-[9.5px] pb-0.5 border-b border-slate-800 font-sans">
+                    <span className="text-sky-400 font-bold font-mono">[1, 2, 4, 6, 8, 11]</span>
+                    <span>Target = 10</span>
+                  </div>
+                  <p className="text-slate-300"><span className="text-blue-400">Step 1:</span> 1+11=12 (Too Big → <code className="text-rose-400">right--</code>)</p>
+                  <p className="text-slate-300"><span className="text-blue-400">Step 2:</span> 1+8=9 (Too Small → <code className="text-amber-400">left++</code>)</p>
+                  <p className="text-emerald-400 font-bold"><span className="text-emerald-300">Step 3:</span> 2+8=10 🎉 Match Found!</p>
+                </div>
+
+                {/* 2. Identification Signals */}
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-1 font-heading font-bold text-foreground text-[11px]">
+                    <span className="h-3.5 w-3.5 rounded-full bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center text-[9px]">2</span>
+                    <span>Identification Signals</span>
+                  </div>
+                  <div className="text-muted-foreground bg-muted/30 p-1.5 rounded-lg border border-border/30 space-y-0.5 text-[10px]">
+                    <p>• <strong>Input:</strong> Sorted array or string (or easily sorted).</p>
+                    <p>• <strong>Keywords:</strong> <em>Two Sum II, 3Sum, Container With Most Water, Palindrome</em>.</p>
+                  </div>
+                </div>
+
+                {/* 3. Execution Recipe & 4. Interview Rule */}
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-1 font-heading font-bold text-foreground text-[11px]">
+                    <span className="h-3.5 w-3.5 rounded-full bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center text-[9px]">3</span>
+                    <span>Execution Recipe & Rule</span>
+                  </div>
+                  <div className="bg-sky-50/50 dark:bg-sky-950/20 p-2 rounded-lg border border-sky-200/60 dark:border-sky-900/40 text-[10px] space-y-0.5">
+                    <p className="font-mono text-slate-700 dark:text-slate-300 font-medium">
+                      left = 0, right = N - 1 → while (left &lt; right)
+                    </p>
+                    <p className="text-slate-600 dark:text-slate-400">
+                      <strong>Rule:</strong> If searching pairs/boundaries in sorted seq, squeeze inward from 0 and N-1.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bottom Footer Guarantee */}
+              <div className="pt-2 border-t border-border/40 flex items-center justify-between text-[10px] text-muted-foreground font-medium">
+                <span>Canonical Framework</span>
+                <span className="text-primary font-bold font-mono">100% Deterministic</span>
+              </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-border">
-            {/* Left: Intuition & Identification */}
-            <div className="p-6 sm:p-8 space-y-6">
-              <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1.5 mb-2.5">
-                  <BrainCircuit className="h-4 w-4" /> The Mental Model (Intuition)
-                </h4>
-                <p className="text-sm text-foreground/90 leading-relaxed bg-muted/30 p-4 rounded-xl border border-border/60">
-                  {featuredPattern.intuition}
-                </p>
-              </div>
-
-              <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 mb-2.5">
-                  <Target className="h-4 w-4 text-emerald-500" /> How to Identify in an Interview
-                </h4>
-                <ul className="space-y-2 text-xs text-muted-foreground">
-                  {featuredPattern.identificationRules.map((rule, i) => (
-                    <li key={i} className="flex items-start gap-2.5">
-                      <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
-                      <span className="leading-relaxed">{rule}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 mb-2.5">
-                  <Award className="h-4 w-4 text-amber-500" /> Benchmark Practice Problems
-                </h4>
-                <div className="space-y-2">
-                  {featuredPattern.problems.map((prob) => (
-                    <div
-                      key={prob.id}
-                      className="flex items-center justify-between text-xs p-2.5 rounded-lg border border-border/60 bg-background/50"
-                    >
-                      <span className="font-semibold text-foreground">{prob.title}</span>
-                      <span className="text-muted-foreground font-mono text-[11px]">{prob.platform}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+          {/* ───────────────────────────────────────────────────────────────── */}
+          {/* CARD 2: Teal / Green Top Ribbon & Subtle Small Shadow             */}
+          {/* ───────────────────────────────────────────────────────────────── */}
+          <div className="group h-[510px] rounded-2xl bg-white dark:bg-card border border-border/50 dark:border-border/40 shadow-lg dark:shadow-[0_6px_25px_-4px_rgba(0,0,0,0.6),0_0_18px_-3px_rgba(74,222,128,0.15)] hover:shadow-xl dark:hover:shadow-[0_10px_35px_-4px_rgba(0,0,0,0.75),0_0_25px_-3px_rgba(74,222,128,0.25)] overflow-hidden flex flex-col justify-between transition-all duration-300 z-10 lg:scale-[1.03] lg:-translate-y-1 hover:-translate-y-2">
+            {/* Solid Emerald / Forest Teal Header Banner matching picture */}
+            <div className="h-14 flex items-center justify-between bg-[#d1fae5] dark:bg-[#112520] px-6 border-b border-emerald-200/40 dark:border-emerald-900/30">
+              <span className="text-[#065f46] dark:text-[#34d399] font-heading font-bold text-xs uppercase tracking-wider flex items-center gap-2">
+                <Code2 className="h-4 w-4 text-[#065f46] dark:text-[#10b981]" />
+                <span>Pseudocode Blueprint</span>
+              </span>
+              <span className="text-[10px] font-mono text-[#065f46] dark:text-[#34d399] font-bold bg-[#065f46]/10 dark:bg-[#34d399]/15 px-2 py-0.5 rounded-full border border-emerald-600/10 dark:border-emerald-400/20">
+                Universal Logic
+              </span>
             </div>
 
-            {/* Right: Pseudocode & Multi-Language Blueprint */}
-            <div className="p-6 sm:p-8 bg-muted/20 flex flex-col justify-between space-y-6">
-              <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 mb-3">
-                  <Code2 className="h-4 w-4 text-primary" /> Pseudocode Blueprint
-                </h4>
-                <CodeViewer
-                  code={featuredPattern.pseudocode}
-                  language="pseudocode"
-                  title="two-sum-sorted.algo"
-                />
+            {/* Card Content: Code Viewer */}
+            <div className="p-4 sm:p-5 space-y-2 text-xs flex-1 flex flex-col justify-between overflow-hidden">
+              <div className="space-y-1.5">
+                <div className="flex flex-col space-y-0.5">
+                  <h3 className="font-heading font-extrabold text-base text-foreground tracking-tight">
+                    twoSumSorted.algo
+                  </h3>
+                  <p className="text-[10px] text-muted-foreground leading-tight">
+                    Language-agnostic logic flow with step-by-step pointers & syntax highlighting.
+                  </p>
+                </div>
+
+                <div className="rounded-xl overflow-hidden border border-border/40 shadow-xs">
+                  <CodeViewer
+                    compact={true}
+                    code={`FUNCTION twoSumSorted(arr, target):
+    left = 0
+    right = LENGTH(arr) - 1
+    
+    WHILE left < right:
+        currentSum = arr[left] + arr[right]
+        
+        IF currentSum == target:
+            RETURN [left, right]
+        ELSE IF currentSum < target:
+            left = left + 1    // Need larger sum
+        ELSE:
+            right = right - 1  // Need smaller sum
+            
+    RETURN [-1, -1]`}
+                    language="pseudocode"
+                    title="two-sum-sorted.algo"
+                  />
+                </div>
               </div>
 
-              <div className="pt-4 border-t border-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-muted-foreground">
-                <span>Production templates ready in Python, C++, Java, JS</span>
-                <Link href={`/patterns/${featuredPattern.slug}`}>
-                  <Button size="sm" className="gap-1.5 text-xs font-semibold h-9">
-                    <span>Explore Full Pattern</span>
-                    <ArrowRight className="h-3.5 w-3.5" />
+              {/* Guarantees */}
+              <div className="pt-2 border-t border-border/40 flex items-center justify-between text-[10px] text-muted-foreground">
+                <span>Time: <strong className="text-foreground font-mono">O(N)</strong></span>
+                <span>Space: <strong className="text-foreground font-mono">O(1)</strong></span>
+                <span className="font-medium text-foreground">Single Pass Execution</span>
+              </div>
+            </div>
+          </div>
+
+          {/* ───────────────────────────────────────────────────────────────── */}
+          {/* CARD 3: Pastel Yellow Top Ribbon & Subtle Small Shadow             */}
+          {/* ───────────────────────────────────────────────────────────────── */}
+          <div className="group h-[510px] rounded-2xl bg-white dark:bg-card border border-border/50 dark:border-border/40 shadow-md dark:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.5),0_0_15px_-3px_rgba(250,204,21,0.12)] hover:shadow-lg dark:hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.7),0_0_22px_-3px_rgba(250,204,21,0.2)] overflow-hidden flex flex-col justify-between transition-all duration-300 lg:rotate-3 lg:hover:rotate-0 hover:-translate-y-1 origin-bottom-left">
+            {/* Solid Warm Amber Header Banner matching Card 2 dark style */}
+            <div className="h-14 flex items-center justify-between bg-[#fef3c7] dark:bg-[#221c0e] px-6 border-b border-amber-200/40 dark:border-amber-900/30">
+              <span className="text-[#b45309] dark:text-[#facc15] font-heading font-bold text-xs uppercase tracking-wider flex items-center gap-2">
+                <Terminal className="h-4 w-4 text-[#b45309] dark:text-[#facc15]" />
+                <span>Production Code</span>
+              </span>
+              <span className="text-[10px] font-mono text-[#b45309] dark:text-[#facc15] font-bold bg-[#b45309]/10 dark:bg-[#facc15]/15 px-2 py-0.5 rounded-full border border-amber-600/10 dark:border-amber-400/20">
+                Multi-Lang
+              </span>
+            </div>
+
+            {/* Card Content: Language Switcher & CodeViewer */}
+            <div className="p-4 sm:p-5 space-y-2 text-xs flex-1 flex flex-col justify-between overflow-hidden">
+              <div className="space-y-1.5">
+                {/* Language Switcher Tabs Bar */}
+                <div className="flex items-center gap-1 p-0.5 rounded-lg bg-muted/50 border border-border/50">
+                  {(["python", "cpp", "java", "javascript"] as const).map((langKey) => {
+                    const label = langKey === "python" ? "Python" : langKey === "cpp" ? "C++" : langKey === "java" ? "Java" : "JS";
+                    const isSelected = activeLanguage === langKey;
+                    return (
+                      <button
+                        key={langKey}
+                        type="button"
+                        onClick={() => setActiveLanguage(langKey)}
+                        className={`flex-1 py-1 px-1.5 rounded-md text-[10.5px] font-semibold transition-all cursor-pointer text-center ${
+                          isSelected
+                            ? "bg-white dark:bg-slate-800 text-foreground shadow-xs font-bold border border-border"
+                            : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Code Viewer */}
+                <div className="rounded-xl overflow-hidden border border-border/40 shadow-xs">
+                  <CodeViewer
+                    compact={true}
+                    code={TWO_SUM_CODE[activeLanguage].code}
+                    language={TWO_SUM_CODE[activeLanguage].lang}
+                    title={TWO_SUM_CODE[activeLanguage].title}
+                  />
+                </div>
+              </div>
+
+              {/* Bottom Action */}
+              <div className="pt-2 border-t border-border/40 flex items-center justify-between gap-2">
+                <span className="text-[10px] text-muted-foreground">
+                  14+ Templates Ready
+                </span>
+                <Link href="/patterns/two-pointers">
+                  <Button size="sm" className="gap-1.5 text-[10.5px] font-semibold h-7 px-2.5 shadow-xs">
+                    <span>Explore Pattern</span>
+                    <ArrowRight className="h-3 w-3" />
                   </Button>
                 </Link>
               </div>
             </div>
           </div>
-        </Card>
+        </div>
       </section>
 
       {/* ========================================================================= */}
@@ -294,7 +502,7 @@ export default function Home() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {MOCK_TOPICS.map((topic) => (
             <Link key={topic.id} href={`/patterns?topic=${topic.slug}`}>
-              <Card className="p-6 hover:border-primary/50 transition-all hover:shadow-md cursor-pointer group hover:-translate-y-0.5">
+              <Card className="p-6 rounded-2xl border border-border/80 dark:border-border/60 hover:border-primary/60 dark:hover:border-primary/60 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 cursor-pointer group hover:-translate-y-1 bg-card/80 backdrop-blur-xs">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors font-mono">
                     {topic.patternCount} Patterns

@@ -441,15 +441,47 @@ export function FormattedTextarea({
 
   const insertTable = () => {
     const textarea = textareaRef.current;
-    const tableMarkdown = `\n| Data Structure | Think of it like... | Best used for... |\n| --- | --- | --- |\n| Arrays & Strings | A row of numbered lockers | Storing ordered items with index access |\n| Hash Tables / Maps | A dictionary (Word -> Definition) | O(1) instant key-value lookups |\n| Linked Lists | Treasure hunt with clue cards | O(1) insertions/deletions without reshaping |\n| Stacks | Stack of cafeteria trays | Last-In, First-Out (LIFO) operations |\n| Queues | A line at a coffee shop | First-In, First-Out (FIFO) processing |\n`;
-
     if (!textarea) {
-      onChange(value + tableMarkdown);
+      const defaultTable = `\n| Column 1 | Column 2 |\n| --- | --- |\n| Item 1 | Description 1 |\n| Item 2 | Description 2 |\n`;
+      onChange(value + defaultTable);
       return;
     }
 
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
+    const selected = value.substring(start, end).trim();
+
+    let tableMarkdown = "";
+
+    if (selected) {
+      const lines = selected.split("\n").map((l) => l.trim()).filter(Boolean);
+      if (lines.length > 1) {
+        const rows = lines.map((line) => {
+          if (line.includes("|")) {
+            const cells = line.split("|").map((c) => c.trim()).filter(Boolean);
+            return `| ${cells.join(" | ")} |`;
+          } else if (line.includes(",")) {
+            const cells = line.split(",").map((c) => c.trim()).filter(Boolean);
+            return `| ${cells.join(" | ")} |`;
+          }
+          return `| ${line} | - |`;
+        });
+        tableMarkdown = `\n| Column 1 | Column 2 |\n| --- | --- |\n${rows.join("\n")}\n`;
+      } else {
+        if (selected.includes("|")) {
+          const cells = selected.split("|").map((c) => c.trim()).filter(Boolean);
+          tableMarkdown = `\n| ${cells.join(" | ")} |\n| ${cells.map(() => "---").join(" | ")} |\n| Sample 1 | Sample 2 |\n`;
+        } else if (selected.includes(",")) {
+          const cells = selected.split(",").map((c) => c.trim()).filter(Boolean);
+          tableMarkdown = `\n| ${cells.join(" | ")} |\n| ${cells.map(() => "---").join(" | ")} |\n| Sample 1 | Sample 2 |\n`;
+        } else {
+          tableMarkdown = `\n| Feature | Description |\n| --- | --- |\n| ${selected} | Details |\n| Item 2 | Details |\n`;
+        }
+      }
+    } else {
+      tableMarkdown = `\n| Column 1 | Column 2 |\n| --- | --- |\n| Item 1 | Description 1 |\n| Item 2 | Description 2 |\n`;
+    }
+
     const newValue = value.substring(0, start) + tableMarkdown + value.substring(end);
     onChange(newValue);
 
