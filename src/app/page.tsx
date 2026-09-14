@@ -223,12 +223,12 @@ export default function Home() {
           {/* ───────────────────────────────────────────────────────────────── */}
           <div className="group h-[460px] rounded-2xl bg-white dark:bg-card border border-border/50 dark:border-border/40 shadow-md dark:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.5),0_0_15px_-3px_rgba(56,189,248,0.12)] hover:shadow-lg dark:hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.7),0_0_22px_-3px_rgba(56,189,248,0.2)] overflow-hidden flex flex-col transition-all duration-300 lg:-rotate-2 lg:hover:rotate-0 hover:-translate-y-1 origin-bottom-right">
             {/* Solid Sky Blue Header Banner */}
-            <div className="h-12 flex items-center justify-between bg-[#e0f2fe] dark:bg-[#0f1f2e] px-4 sm:px-5 border-b border-sky-200/40 dark:border-sky-900/30 shrink-0">
-              <span className="text-[#0369a1] dark:text-[#38bdf8] font-heading font-bold text-xs uppercase tracking-wider flex items-center gap-2">
+            <div className="h-12 flex items-center justify-between bg-[#e0f2fe] dark:bg-[#0f1f2e] px-4 sm:px-5 border-b border-sky-200/40 dark:border-sky-900/30 shrink-0 gap-2">
+              <span className="text-[#0369a1] dark:text-[#38bdf8] font-heading font-bold text-xs uppercase tracking-wider flex items-center gap-2 shrink-0">
                 <BrainCircuit className="h-4 w-4 text-[#0369a1] dark:text-[#38bdf8]" />
                 <span>Know Your Pattern</span>
               </span>
-              <Badge variant="easy" className="text-[10px] px-2 py-0.2 font-bold bg-[#0369a1]/10 dark:bg-[#38bdf8]/15 text-[#0369a1] dark:text-[#38bdf8] border border-sky-600/10 dark:border-sky-400/20">
+              <Badge variant="easy" className="text-[8.5px] px-1.5 py-0.2 font-bold bg-[#0369a1]/10 dark:bg-[#38bdf8]/15 text-[#0369a1] dark:text-[#38bdf8] border border-sky-600/10 dark:border-sky-400/20 whitespace-nowrap shrink-0">
                 EASY • O(N)
               </Badge>
             </div>
@@ -300,12 +300,12 @@ export default function Home() {
           {/* ───────────────────────────────────────────────────────────────── */}
           <div className="group h-[460px] rounded-2xl bg-white dark:bg-card border border-border/50 dark:border-border/40 shadow-lg dark:shadow-[0_6px_25px_-4px_rgba(0,0,0,0.6),0_0_18px_-3px_rgba(74,222,128,0.15)] hover:shadow-xl dark:hover:shadow-[0_10px_35px_-4px_rgba(0,0,0,0.75),0_0_25px_-3px_rgba(74,222,128,0.25)] overflow-hidden flex flex-col transition-all duration-300 z-10 lg:scale-[1.02] lg:-translate-y-1 hover:-translate-y-2">
             {/* Solid Emerald / Forest Teal Header Banner */}
-            <div className="h-12 flex items-center justify-between bg-[#d1fae5] dark:bg-[#112520] px-4 sm:px-5 border-b border-emerald-200/40 dark:border-emerald-900/30 shrink-0">
-              <span className="text-[#065f46] dark:text-[#34d399] font-heading font-bold text-xs uppercase tracking-wider flex items-center gap-2">
+            <div className="h-12 flex items-center justify-between bg-[#d1fae5] dark:bg-[#112520] px-4 sm:px-5 border-b border-emerald-200/40 dark:border-emerald-900/30 shrink-0 gap-2">
+              <span className="text-[#065f46] dark:text-[#34d399] font-heading font-bold text-xs uppercase tracking-wider flex items-center gap-2 shrink-0">
                 <Code2 className="h-4 w-4 text-[#065f46] dark:text-[#10b981]" />
                 <span>Pseudocode Blueprint</span>
               </span>
-              <span className="text-[10px] font-mono text-[#065f46] dark:text-[#34d399] font-bold bg-[#065f46]/10 dark:bg-[#34d399]/15 px-2 py-0.5 rounded-full border border-emerald-600/10 dark:border-emerald-400/20">
+              <span className="text-[8.5px] font-mono text-[#065f46] dark:text-[#34d399] font-bold bg-[#065f46]/10 dark:bg-[#34d399]/15 px-2 py-0.5 rounded-full border border-emerald-600/10 dark:border-emerald-400/20 whitespace-nowrap shrink-0">
                 Universal Logic
               </span>
             </div>
@@ -360,12 +360,12 @@ export default function Home() {
           {/* ───────────────────────────────────────────────────────────────── */}
           <div className="group h-[460px] rounded-2xl bg-white dark:bg-card border border-border/50 dark:border-border/40 shadow-md dark:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.5),0_0_15px_-3px_rgba(250,204,21,0.12)] hover:shadow-lg dark:hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.7),0_0_22px_-3px_rgba(250,204,21,0.2)] overflow-hidden flex flex-col transition-all duration-300 lg:rotate-2 lg:hover:rotate-0 hover:-translate-y-1 origin-bottom-left">
             {/* Solid Warm Amber Header Banner */}
-            <div className="h-12 flex items-center justify-between bg-[#fef3c7] dark:bg-[#221c0e] px-4 sm:px-5 border-b border-amber-200/40 dark:border-amber-900/30 shrink-0">
-              <span className="text-[#b45309] dark:text-[#facc15] font-heading font-bold text-xs uppercase tracking-wider flex items-center gap-2">
+            <div className="h-12 flex items-center justify-between bg-[#fef3c7] dark:bg-[#221c0e] px-4 sm:px-5 border-b border-amber-200/40 dark:border-amber-900/30 shrink-0 gap-2">
+              <span className="text-[#b45309] dark:text-[#facc15] font-heading font-bold text-xs uppercase tracking-wider flex items-center gap-2 shrink-0">
                 <Terminal className="h-4 w-4 text-[#b45309] dark:text-[#facc15]" />
                 <span>Production Code</span>
               </span>
-              <span className="text-[10px] font-mono text-[#b45309] dark:text-[#facc15] font-bold bg-[#b45309]/10 dark:bg-[#facc15]/15 px-2 py-0.5 rounded-full border border-amber-600/10 dark:border-amber-400/20">
+              <span className="text-[8.5px] font-mono text-[#b45309] dark:text-[#facc15] font-bold bg-[#b45309]/10 dark:bg-[#facc15]/15 px-2 py-0.5 rounded-full border border-amber-600/10 dark:border-amber-400/20 whitespace-nowrap shrink-0">
                 Multi-Lang
               </span>
             </div>
