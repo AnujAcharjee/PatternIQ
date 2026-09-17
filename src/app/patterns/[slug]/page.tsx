@@ -363,6 +363,12 @@ export default function PatternDetailPage({ params }: { params: { slug: string }
                   <Badge variant={pattern.difficulty === "EASY" ? "easy" : "medium"}>
                     {pattern.difficulty}
                   </Badge>
+                  <span
+                    className="text-xs text-amber-400 font-mono tracking-tighter"
+                    title={`Importance: ${pattern.importance || 5}/5 stars`}
+                  >
+                    {"★".repeat(Math.max(1, Math.min(5, pattern.importance || 5)))}
+                  </span>
                   <Badge variant="outline">Time: {pattern.complexity.time}</Badge>
                   <Badge variant="outline">Space: {pattern.complexity.space}</Badge>
                 </div>

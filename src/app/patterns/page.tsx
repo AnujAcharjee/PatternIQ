@@ -54,6 +54,7 @@ interface UnifiedPattern {
   topicSlug: string;
   topicName: string;
   difficulty: "EASY" | "MEDIUM" | "HARD";
+  importance: number;
   summary: string;
   complexity: {
     time: string;
@@ -107,6 +108,7 @@ function PatternsContent() {
             topicSlug: p.topic?.slug || "",
             topicName: p.topic?.name || "",
             difficulty: p.difficulty || "MEDIUM",
+            importance: p.importance || 5,
             summary: p.shortDescription || p.summary || "",
             complexity: {
               time: p.timeComplexity || "O(N)",
@@ -121,7 +123,9 @@ function PatternsContent() {
         let loadedTopics: UnifiedTopic[] = [];
         if (topicsRes.success && Array.isArray(topicsRes.data)) {
           loadedTopics = topicsRes.data.map((t, idx) => {
-            const topicPats = mappedPatterns.filter((p) => p.topicSlug === t.slug);
+            const topicPats = mappedPatterns
+              .filter((p) => p.topicSlug === t.slug)
+              .sort((a, b) => (a.number ?? 0) - (b.number ?? 0));
             const completedCount = topicPats.filter(
               (p) => userProgressMap[p.id] === "COMPLETED" || userProgressMap[p.id] === "MASTERED"
             ).length;
@@ -140,10 +144,11 @@ function PatternsContent() {
           setTopics(loadedTopics);
         }
 
-        // Set initial expanded topic
-        const activeSlug = initialTopic || loadedTopics[0]?.slug;
-        if (activeSlug) {
-          setExpandedTopics({ [activeSlug]: true });
+        // Set initial expanded topic only if explicitly requested in query param
+        if (initialTopic) {
+          setExpandedTopics({ [initialTopic]: true });
+        } else {
+          setExpandedTopics({});
         }
       } catch (err) {
         console.error("Failed to fetch live API data", err);
@@ -380,6 +385,12 @@ function PatternsContent() {
                                     <Badge variant={pat.difficulty === "EASY" ? "easy" : "medium"}>
                                       {pat.difficulty}
                                     </Badge>
+                                    <span
+                                      className="text-xs text-amber-400 font-mono tracking-tighter"
+                                      title={`Importance: ${pat.importance || 5}/5 stars`}
+                                    >
+                                      {"★".repeat(Math.max(1, Math.min(5, pat.importance || 5)))}
+                                    </span>
                                     <Badge variant="outline" className="text-[11px] font-mono">
                                       Time: {pat.complexity.time}
                                     </Badge>

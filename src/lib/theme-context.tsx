@@ -27,10 +27,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       if (stored === "dark" || stored === "light") {
         activeTheme = stored;
       } else {
-        // Fetch user default system preference and fix to that initially
-        const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-        activeTheme = prefersDark ? "dark" : "light";
-        localStorage.setItem(THEME_STORAGE_KEY, activeTheme);
+        activeTheme = "dark";
+        localStorage.setItem(THEME_STORAGE_KEY, "dark");
       }
 
       setThemeState(activeTheme);

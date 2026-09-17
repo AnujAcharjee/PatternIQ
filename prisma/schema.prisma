@@ -229,6 +229,7 @@ model Problem {
 
   patterns PatternProblem[]
   progress UserProblemProgress[]
+  notes    Note[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -326,13 +327,17 @@ model Note {
 
   userId    String
   patternId String?
+  problemId String?
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  problem Problem? @relation(fields: [problemId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([userId])
+  @@index([userId, problemId])
+  @@index([userId, patternId])
 }
 
 // ------------------------------------------------------------

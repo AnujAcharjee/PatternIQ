@@ -1,4 +1,4 @@
-﻿export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic';
 import { apiHandler } from "@/lib/handler";
 import { ok } from "@/lib/api-response";
 import { prisma } from "@/lib/prisma";
@@ -8,7 +8,7 @@ export const GET = apiHandler(async () => {
     orderBy: { order: "asc" },
     include: {
       patterns: {
-        orderBy: { order: "asc" },
+        orderBy: [{ number: "asc" }, { order: "asc" }],
         include: {
           problems: {
             orderBy: { order: "asc" },

@@ -43,6 +43,14 @@ import {
   RefreshCw,
   PenSquare,
   Eye,
+  ChevronDown,
+  ChevronRight,
+  Sparkles,
+  Search,
+  Filter,
+  Check,
+  LayoutGrid,
+  List,
 } from "lucide-react";
 import { cn, cleanLatexMath } from "@/lib/utils";
 
@@ -55,6 +63,35 @@ const TOPIC_ICON_OPTIONS = [
   { name: "BookOpen (Curriculum)", icon: BookOpen, value: "BookOpen" },
   { name: "Code2 (Data Structures)", icon: Code2, value: "Code2" },
 ];
+
+const PLATFORM_OPTIONS = [
+  { label: "LeetCode", value: "LeetCode", color: "bg-amber-500/10 text-amber-500 border-amber-500/30 hover:bg-amber-500/20" },
+  { label: "GFG", value: "GFG", color: "bg-emerald-500/10 text-emerald-500 border-emerald-500/30 hover:bg-emerald-500/20" },
+  { label: "Codeforces", value: "Codeforces", color: "bg-blue-500/10 text-blue-500 border-blue-500/30 hover:bg-blue-500/20" },
+  { label: "HackerRank", value: "HackerRank", color: "bg-teal-500/10 text-teal-400 border-teal-500/30 hover:bg-teal-500/20" },
+  { label: "CodeChef", value: "CodeChef", color: "bg-orange-500/10 text-orange-400 border-orange-500/30 hover:bg-orange-500/20" },
+  { label: "Other", value: "Other", color: "bg-purple-500/10 text-purple-400 border-purple-500/30 hover:bg-purple-500/20" },
+];
+
+const getTopicIconComponent = (iconName?: string | null, slug?: string) => {
+  if (iconName) {
+    const found = TOPIC_ICON_OPTIONS.find(
+      (o) => o.value.toLowerCase() === iconName.toLowerCase() || o.name.toLowerCase().includes(iconName.toLowerCase())
+    );
+    if (found) return found.icon;
+  }
+  if (slug) {
+    const s = slug.toLowerCase();
+    if (s.includes("pointer") || s.includes("target")) return Target;
+    if (s.includes("window") || s.includes("subarray") || s.includes("maximize")) return Maximize2;
+    if (s.includes("fast") || s.includes("zap") || s.includes("speed") || s.includes("slow")) return Zap;
+    if (s.includes("tree") || s.includes("graph") || s.includes("branch") || s.includes("bfs") || s.includes("dfs")) return GitBranch;
+    if (s.includes("dp") || s.includes("dynamic") || s.includes("layer")) return Layers;
+    if (s.includes("math") || s.includes("code") || s.includes("structure") || s.includes("bit")) return Code2;
+    if (s.includes("curriculum") || s.includes("book")) return BookOpen;
+  }
+  return Layers;
+};
 
 interface TopicItem {
   id: string;
@@ -240,14 +277,80 @@ export default function AdminPage() {
   // -------------------------------------------------------------
   // FORM STATES: 3. NEW PROBLEM
   // -------------------------------------------------------------
+  const [newProblemTopicId, setNewProblemTopicId] = useState("");
   const [newProblemPatternId, setNewProblemPatternId] = useState("");
+  const [newProblemPatternSearch, setNewProblemPatternSearch] = useState("");
   const [newProblemTitle, setNewProblemTitle] = useState("");
   const [newProblemPlatform, setNewProblemPlatform] = useState("LeetCode");
+  const [newProblemCustomPlatform, setNewProblemCustomPlatform] = useState("");
   const [newProblemExternalId, setNewProblemExternalId] = useState("");
   const [newProblemDifficulty, setNewProblemDifficulty] = useState<"EASY" | "MEDIUM" | "HARD">("MEDIUM");
   const [newProblemUrl, setNewProblemUrl] = useState("");
   const [newProblemIsCore, setNewProblemIsCore] = useState(true);
   const [isSubmittingProblem, setIsSubmittingProblem] = useState(false);
+
+  // In-modal success messages for continuous addition
+  const [patternModalSuccess, setPatternModalSuccess] = useState<string | null>(null);
+  const [problemModalSuccess, setProblemModalSuccess] = useState<string | null>(null);
+
+  // Patterns inventory view controls
+  const [expandedAdminTopics, setExpandedAdminTopics] = useState<Record<string, boolean>>({});
+  const [patternSearchQuery, setPatternSearchQuery] = useState("");
+  const [patternTopicFilter, setPatternTopicFilter] = useState("ALL");
+  const [patternViewMode, setPatternViewMode] = useState<"accordion" | "flat">("accordion");
+
+  // Toggle accordion for a topic
+  const toggleAdminTopic = (topicId: string) => {
+    setExpandedAdminTopics((prev) => ({
+      ...prev,
+      [topicId]: !prev[topicId],
+    }));
+  };
+
+  // Open Add Problem Modal with specific topic/pattern pre-selected
+  const openAddProblemModal = (topicId?: string, patternId?: string) => {
+    const targetTopicId = topicId || (patternId ? patterns.find((p) => p.id === patternId)?.topicId : "") || newProblemTopicId || topics[0]?.id || "";
+    setNewProblemTopicId(targetTopicId);
+
+    const topicPatterns = patterns.filter((p) => p.topicId === targetTopicId || p.topic?.id === targetTopicId);
+    if (patternId) {
+      setNewProblemPatternId(patternId);
+    } else if (topicPatterns.length > 0) {
+      setNewProblemPatternId(topicPatterns[0].id);
+    } else {
+      setNewProblemPatternId("");
+    }
+
+    setNewProblemPatternSearch("");
+    setShowProblemModal(true);
+  };
+
+  // Open Add Pattern Modal for a topic
+  const openAddPatternModal = (topicId?: string, topicName?: string) => {
+    if (topicId) {
+      setNewPatternTopicId(topicId);
+      const foundTopic = topics.find((t) => t.id === topicId);
+      setNewPatternTopicName(topicName || foundTopic?.name || "");
+    }
+    setShowPatternModal(true);
+  };
+
+  // Smart detect platform when typing / pasting URL
+  const handleSolveUrlChange = (url: string, setUrl: (v: string) => void, setPlatform: (p: string) => void) => {
+    setUrl(url);
+    const lower = url.toLowerCase();
+    if (lower.includes("leetcode.com")) {
+      setPlatform("LeetCode");
+    } else if (lower.includes("geeksforgeeks.org")) {
+      setPlatform("GFG");
+    } else if (lower.includes("codeforces.com")) {
+      setPlatform("Codeforces");
+    } else if (lower.includes("hackerrank.com")) {
+      setPlatform("HackerRank");
+    } else if (lower.includes("codechef.com")) {
+      setPlatform("CodeChef");
+    }
+  };
 
   // -------------------------------------------------------------
   // MANDATORY SECURITY VERIFICATION: Backend API Check
@@ -338,9 +441,14 @@ export default function AdminPage() {
 
       if (topicsRes.success && Array.isArray(topicsRes.data)) {
         setTopics(topicsRes.data);
-        if (topicsRes.data.length > 0 && !newPatternTopicId) {
-          setNewPatternTopicId(topicsRes.data[0].id);
-          setNewPatternTopicName(topicsRes.data[0].name);
+        if (topicsRes.data.length > 0) {
+          if (!newPatternTopicId) {
+            setNewPatternTopicId(topicsRes.data[0].id);
+            setNewPatternTopicName(topicsRes.data[0].name);
+          }
+          if (!newProblemTopicId) {
+            setNewProblemTopicId(topicsRes.data[0].id);
+          }
         }
       }
 
@@ -492,11 +600,10 @@ export default function AdminPage() {
       });
 
       if (res.success && res.data) {
+        const createdName = newPatternName;
         setPatterns((prev) => [res.data!, ...prev]);
-        setShowPatternModal(false);
-        showSuccess(`Pattern "${newPatternName}" successfully created and published!`);
+        // Keep modal OPEN for continuous creation: reset fields & advance pattern number
         setNewPatternName("");
-        setNewPatternTopicName("");
         setNewPatternShortDesc("");
         setNewPatternWhatIsThis("");
         setNewPatternIntuition("");
@@ -511,6 +618,9 @@ export default function AdminPage() {
         setNewPatternJs("");
         setNewPatternSelectedProblems([]);
         setNewPatternNumber((n) => Number(n) + 1);
+        setPatternModalSuccess(`Pattern "${createdName}" created and published! You can add Pattern #${Number(newPatternNumber) + 1} below.`);
+        setTimeout(() => setPatternModalSuccess(null), 5000);
+        showSuccess(`Pattern "${createdName}" successfully created and published!`);
         await loadAllAdminData();
       } else {
         showError(res.error?.message || "Failed to create pattern");
@@ -620,11 +730,14 @@ export default function AdminPage() {
           }).catch(() => {});
         }
 
-        setShowProblemModal(false);
-        showSuccess(`Problem "${newProblemTitle}" created and attached!`);
+        const savedTitle = newProblemTitle;
+        // Keep modal OPEN for continuous creation: reset problem fields but keep topic & pattern
         setNewProblemTitle("");
         setNewProblemUrl("");
         setNewProblemExternalId("");
+        setProblemModalSuccess(`Problem "${savedTitle}" created and attached! You can add another problem below.`);
+        setTimeout(() => setProblemModalSuccess(null), 5000);
+        showSuccess(`Problem "${savedTitle}" created and attached!`);
         loadAllAdminData();
       } else {
         showError(res.error?.message || "Failed to create problem");
@@ -890,7 +1003,7 @@ export default function AdminPage() {
 
           <Button
             size="sm"
-            onClick={() => setShowPatternModal(true)}
+            onClick={() => openAddPatternModal()}
             className="gap-1.5 text-xs h-9 cursor-pointer"
           >
             <Plus className="h-3.5 w-3.5" />
@@ -900,7 +1013,7 @@ export default function AdminPage() {
           <Button
             size="sm"
             variant="outline"
-            onClick={() => setShowProblemModal(true)}
+            onClick={() => openAddProblemModal()}
             className="gap-1.5 text-xs h-9 cursor-pointer"
           >
             <FileText className="h-3.5 w-3.5 text-emerald-500" />
@@ -1122,94 +1235,461 @@ export default function AdminPage() {
         </TabsContent>
 
         {/* ============================================================== */}
-        {/* TAB 2: PATTERNS INVENTORY */}
+        {/* TAB 2: PATTERNS INVENTORY (TOPIC ACCORDION & FILTERED LIST) */}
         {/* ============================================================== */}
         <TabsContent value="patterns" className="pt-4 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h2 className="text-lg font-bold">Pattern Inventory ({patterns.length})</h2>
               <p className="text-xs text-muted-foreground">
-                All algorithmic problem-solving patterns complete with mental models, complexity, and templates.
+                All algorithmic problem-solving patterns organized by curriculum topics.
               </p>
             </div>
-            <Button
-              size="sm"
-              onClick={() => setShowPatternModal(true)}
-              className="gap-1.5 text-xs h-9 cursor-pointer"
-            >
-              <Plus className="h-4 w-4" />
-              <span>Add New Pattern</span>
-            </Button>
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* View Mode Toggle */}
+              <div className="flex items-center border border-border rounded-lg p-0.5 bg-muted/20 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setPatternViewMode("accordion")}
+                  className={cn(
+                    "flex items-center gap-1 px-2.5 py-1 rounded-md transition-colors cursor-pointer",
+                    patternViewMode === "accordion"
+                      ? "bg-primary text-primary-foreground font-semibold shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                  title="Topic Accordion View"
+                >
+                  <LayoutGrid className="h-3.5 w-3.5" />
+                  <span>Topic Boxes</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPatternViewMode("flat")}
+                  className={cn(
+                    "flex items-center gap-1 px-2.5 py-1 rounded-md transition-colors cursor-pointer",
+                    patternViewMode === "flat"
+                      ? "bg-primary text-primary-foreground font-semibold shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                  title="Flat List View"
+                >
+                  <List className="h-3.5 w-3.5" />
+                  <span>All List</span>
+                </button>
+              </div>
+
+              <Button
+                size="sm"
+                onClick={() => openAddPatternModal()}
+                className="gap-1.5 text-xs h-9 cursor-pointer"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Add New Pattern</span>
+              </Button>
+            </div>
           </div>
 
-          <Card>
-            <div className="divide-y divide-border/60">
-              {patterns.length > 0 ? (
-                patterns.map((pat) => (
-                  <div
-                    key={pat.id}
-                    className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-muted/10 transition-colors"
+          {/* Search & Topic Filter Bar */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-muted/20 p-3 rounded-xl border border-border">
+            <div className="flex items-center gap-2 flex-1">
+              <div className="relative flex-1 max-w-sm">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  placeholder="Search patterns by name or number..."
+                  value={patternSearchQuery}
+                  onChange={(e) => setPatternSearchQuery(e.target.value)}
+                  className="pl-8 text-xs h-8 bg-background/60"
+                />
+                {patternSearchQuery && (
+                  <button
+                    onClick={() => setPatternSearchQuery("")}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground text-xs font-bold font-mono shrink-0">
-                        #{pat.number}
-                      </span>
-                      <div className="space-y-0.5 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-semibold text-sm truncate text-foreground">{pat.name}</span>
-                          <Badge variant={pat.difficulty === "EASY" ? "easy" : "medium"}>
-                            {pat.difficulty}
-                          </Badge>
-                          {pat.timeComplexity && (
-                            <Badge variant="outline" className="text-[11px] font-mono">
-                              {pat.timeComplexity}
-                            </Badge>
-                          )}
-                          <span className="text-xs text-amber-400 font-mono">
-                            {"★".repeat(pat.importance || 5)}
-                          </span>
-                        </div>
-                        <span className="text-xs text-muted-foreground block truncate">
-                          Track: {pat.topic?.name || "Unassigned"} • {pat._count?.problems ?? 0} Problems Attached
-                        </span>
-                      </div>
-                    </div>
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
-                      <Link href={`/patterns/${pat.slug}`} target="_blank">
-                        <Button size="sm" variant="ghost" className="text-xs h-7 px-2.5">
-                          <ExternalLink className="h-3 w-3 mr-1" />
-                          <span>Preview</span>
-                        </Button>
-                      </Link>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => openEditPattern(pat)}
-                        className="text-xs h-7 px-2.5 gap-1 cursor-pointer"
-                      >
-                        <Edit2 className="h-3 w-3" />
-                        <span>Edit</span>
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setItemToDelete({ type: "pattern", id: pat.id, name: pat.name })}
-                        className="text-xs h-7 px-2.5 gap-1 text-destructive hover:bg-destructive/10 cursor-pointer"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                        <span>Delete</span>
-                      </Button>
+              <div className="flex items-center gap-1.5">
+                <Filter className="h-3.5 w-3.5 text-muted-foreground hidden sm:inline" />
+                <select
+                  value={patternTopicFilter}
+                  onChange={(e) => setPatternTopicFilter(e.target.value)}
+                  className="h-8 rounded-md border border-input bg-background px-2 py-1 text-xs text-foreground cursor-pointer"
+                >
+                  <option value="ALL">All Topics ({topics.length})</option>
+                  {topics.map((t) => {
+                    const count = patterns.filter((p) => p.topicId === t.id || p.topic?.id === t.id).length;
+                    return (
+                      <option key={t.id} value={t.id}>
+                        {t.name} ({count} patterns)
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+            </div>
+
+            <div className="text-xs text-muted-foreground font-mono self-center">
+              Showing{" "}
+              {
+                patterns
+                  .filter((p) => (patternTopicFilter === "ALL" ? true : p.topicId === patternTopicFilter || p.topic?.id === patternTopicFilter))
+                  .filter((p) =>
+                    patternSearchQuery
+                      ? p.name.toLowerCase().includes(patternSearchQuery.toLowerCase()) ||
+                        `#${p.number}`.includes(patternSearchQuery)
+                      : true
+                  ).length
+              }{" "}
+              patterns
+            </div>
+          </div>
+
+          {/* ============================================================== */}
+          {/* VIEW MODE 1: TOPIC ACCORDION BOXES (MATCHES SCREENSHOT) */}
+          {/* ============================================================== */}
+          {patternViewMode === "accordion" ? (
+            <div className="space-y-4">
+              {topics
+                .filter((t) => (patternTopicFilter === "ALL" ? true : t.id === patternTopicFilter))
+                .map((topic) => {
+                  const topicPatterns = patterns
+                    .filter((p) => p.topicId === topic.id || p.topic?.id === topic.id)
+                    .filter((p) =>
+                      patternSearchQuery
+                        ? p.name.toLowerCase().includes(patternSearchQuery.toLowerCase()) ||
+                          `#${p.number}`.includes(patternSearchQuery)
+                        : true
+                    );
+                  const isExpanded = Boolean(expandedAdminTopics[topic.id] || patternSearchQuery);
+                  const Icon = getTopicIconComponent(topic.icon, topic.slug);
+                  const totalTopicPatterns = patterns.filter((p) => p.topicId === topic.id || p.topic?.id === topic.id).length;
+
+                  return (
+                    <div
+                      key={topic.id}
+                      className={cn(
+                        "rounded-2xl border transition-all duration-200 overflow-hidden bg-card",
+                        isExpanded
+                          ? "border-primary/50 shadow-md ring-1 ring-primary/20"
+                          : "border-border/80 hover:border-primary/40 hover:shadow-sm"
+                      )}
+                    >
+                      {/* Topic Header Card (Exact Look of the Screen Box) */}
+                      <div className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 select-none">
+                        <div
+                          onClick={() => toggleAdminTopic(topic.id)}
+                          className="flex items-start sm:items-center gap-3.5 min-w-0 flex-1 cursor-pointer"
+                        >
+                          <div
+                            className={cn(
+                              "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl font-bold transition-colors border",
+                              isExpanded
+                                ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                                : "bg-muted text-muted-foreground border-border"
+                            )}
+                          >
+                            <Icon className="h-5 w-5" />
+                          </div>
+
+                          <div className="space-y-1 min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h3 className="text-base sm:text-lg font-bold tracking-tight text-foreground">
+                                {topic.name}
+                              </h3>
+                              <Badge variant={isExpanded ? "default" : "secondary"} className="text-xs font-semibold">
+                                {totalTopicPatterns} Patterns
+                              </Badge>
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  "text-[10px]",
+                                  topic.published ? "text-emerald-500 border-emerald-500/30" : "text-amber-500 border-amber-500/30"
+                                )}
+                              >
+                                {topic.published ? "PUBLISHED" : "DRAFT"}
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-muted-foreground line-clamp-1 leading-relaxed">
+                              {topic.description || "Core algorithmic pattern curriculum track."}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Actions on Right */}
+                        <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0 border-t sm:border-t-0 border-border/50 pt-2.5 sm:pt-0">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openAddPatternModal(topic.id, topic.name)}
+                            className="h-8 px-2.5 text-xs gap-1 cursor-pointer hover:border-primary/50 hover:bg-primary/5"
+                            title={`Add pattern to ${topic.name}`}
+                          >
+                            <Plus className="h-3.5 w-3.5 text-primary" />
+                            <span className="hidden md:inline">+ Pattern</span>
+                          </Button>
+
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openAddProblemModal(topic.id)}
+                            className="h-8 px-2.5 text-xs gap-1 cursor-pointer text-emerald-500 border-emerald-500/30 hover:bg-emerald-500/10"
+                            title={`Add problem to ${topic.name}`}
+                          >
+                            <FileText className="h-3.5 w-3.5" />
+                            <span className="hidden md:inline">+ Problem</span>
+                          </Button>
+
+                          <button
+                            type="button"
+                            onClick={() => toggleAdminTopic(topic.id)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors cursor-pointer"
+                          >
+                            <span>{isExpanded ? "Hide Patterns" : "View Patterns"}</span>
+                            <div
+                              className={cn(
+                                "flex h-5 w-5 items-center justify-center rounded transition-transform duration-200",
+                                isExpanded ? "rotate-180 text-primary" : ""
+                              )}
+                            >
+                              <ChevronDown className="h-4 w-4" />
+                            </div>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* EXPANDED CONTENT: PATTERNS LIST UNDER THIS TOPIC */}
+                      {isExpanded && (
+                        <div className="border-t border-border bg-muted/10 p-3 sm:p-4 space-y-2.5 animate-in slide-in-from-top-1 duration-150">
+                          <div className="flex items-center justify-between px-1 text-xs text-muted-foreground">
+                            <span className="font-semibold uppercase tracking-wider flex items-center gap-1.5">
+                              <Sparkles className="h-3.5 w-3.5 text-primary" />
+                              <span>Patterns in &quot;{topic.name}&quot; ({topicPatterns.length})</span>
+                            </span>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => openAddPatternModal(topic.id, topic.name)}
+                              className="text-[11px] h-6 px-2 text-primary hover:underline cursor-pointer"
+                            >
+                              + Add another pattern to this topic
+                            </Button>
+                          </div>
+
+                          {topicPatterns.length > 0 ? (
+                            <div className="divide-y divide-border/60 rounded-xl border border-border/70 bg-card overflow-hidden">
+                              {topicPatterns.map((pat) => (
+                                <div
+                                  key={pat.id}
+                                  className="p-3 sm:p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-muted/20 transition-colors"
+                                >
+                                  <div className="flex items-center gap-3 min-w-0">
+                                    <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground text-xs font-bold font-mono shrink-0 shadow-xs">
+                                      #{pat.number}
+                                    </span>
+                                    <div className="space-y-0.5 min-w-0">
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        <span className="font-semibold text-xs sm:text-sm text-foreground truncate">
+                                          {pat.name}
+                                        </span>
+                                        <Badge
+                                          variant={pat.difficulty === "EASY" ? "easy" : "medium"}
+                                          className="text-[10px] px-1.5 py-0"
+                                        >
+                                          {pat.difficulty}
+                                        </Badge>
+                                        {pat.timeComplexity && (
+                                          <Badge variant="outline" className="text-[10px] font-mono px-1.5 py-0">
+                                            {pat.timeComplexity}
+                                          </Badge>
+                                        )}
+                                        <span className="text-[11px] text-amber-400 font-mono">
+                                          {"★".repeat(pat.importance || 5)}
+                                        </span>
+                                      </div>
+                                      <span className="text-[11px] text-muted-foreground block truncate">
+                                        {pat.shortDescription || pat.intuition || "No summary provided"} • {pat._count?.problems ?? 0} Problems Attached
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => openAddProblemModal(topic.id, pat.id)}
+                                      className="text-xs h-7 px-2 text-emerald-500 border-emerald-500/30 hover:bg-emerald-500/10 cursor-pointer"
+                                      title="Add practice problem directly to this pattern"
+                                    >
+                                      <Plus className="h-3 w-3 mr-0.5" />
+                                      <span>Add Problem</span>
+                                    </Button>
+                                    <Link href={`/patterns/${pat.slug}`} target="_blank">
+                                      <Button size="sm" variant="ghost" className="text-xs h-7 px-2">
+                                        <ExternalLink className="h-3 w-3 mr-1" />
+                                        <span>Preview</span>
+                                      </Button>
+                                    </Link>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => openEditPattern(pat)}
+                                      className="text-xs h-7 px-2 gap-1 cursor-pointer"
+                                    >
+                                      <Edit2 className="h-3 w-3" />
+                                      <span>Edit</span>
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => setItemToDelete({ type: "pattern", id: pat.id, name: pat.name })}
+                                      className="text-xs h-7 px-2 gap-1 text-destructive hover:bg-destructive/10 cursor-pointer"
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                      <span>Delete</span>
+                                    </Button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="p-6 text-center text-xs text-muted-foreground border border-dashed rounded-xl bg-card/50 space-y-2">
+                              <p>No patterns created under &quot;{topic.name}&quot; yet.</p>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => openAddPatternModal(topic.id, topic.name)}
+                                className="text-xs gap-1.5 h-8"
+                              >
+                                <Plus className="h-3.5 w-3.5" />
+                                <span>Create First Pattern in {topic.name}</span>
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
+                  );
+                })}
+
+              {/* Unassigned Patterns (if any) */}
+              {patterns.filter((p) => !p.topicId && !p.topic?.id).length > 0 && (
+                <div className="rounded-2xl border border-amber-500/40 bg-amber-500/5 p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-amber-500 uppercase tracking-wider">
+                      Unassigned Patterns ({patterns.filter((p) => !p.topicId && !p.topic?.id).length})
+                    </span>
                   </div>
-                ))
-              ) : (
-                <div className="p-8 text-center text-xs text-muted-foreground">
-                  No patterns found in the database.
+                  <div className="divide-y divide-border/60 rounded-xl border border-border bg-card overflow-hidden">
+                    {patterns
+                      .filter((p) => !p.topicId && !p.topic?.id)
+                      .map((pat) => (
+                        <div
+                          key={pat.id}
+                          className="p-3 flex items-center justify-between gap-3 hover:bg-muted/20"
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <span className="font-mono text-xs font-bold">#{pat.number}</span>
+                            <span className="font-semibold text-xs text-foreground">{pat.name}</span>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openEditPattern(pat)}
+                            className="text-xs h-7 px-2 gap-1 cursor-pointer"
+                          >
+                            <Edit2 className="h-3 w-3" />
+                            <span>Assign Topic</span>
+                          </Button>
+                        </div>
+                      ))}
+                  </div>
                 </div>
               )}
             </div>
-          </Card>
+          ) : (
+            /* VIEW MODE 2: FLAT LIST */
+            <Card>
+              <div className="divide-y divide-border/60">
+                {patterns
+                  .filter((p) => (patternTopicFilter === "ALL" ? true : p.topicId === patternTopicFilter || p.topic?.id === patternTopicFilter))
+                  .filter((p) =>
+                    patternSearchQuery
+                      ? p.name.toLowerCase().includes(patternSearchQuery.toLowerCase()) ||
+                        `#${p.number}`.includes(patternSearchQuery)
+                      : true
+                  )
+                  .map((pat) => (
+                    <div
+                      key={pat.id}
+                      className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-muted/10 transition-colors"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground text-xs font-bold font-mono shrink-0">
+                          #{pat.number}
+                        </span>
+                        <div className="space-y-0.5 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-semibold text-sm truncate text-foreground">{pat.name}</span>
+                            <Badge variant={pat.difficulty === "EASY" ? "easy" : "medium"}>
+                              {pat.difficulty}
+                            </Badge>
+                            {pat.timeComplexity && (
+                              <Badge variant="outline" className="text-[11px] font-mono">
+                                {pat.timeComplexity}
+                              </Badge>
+                            )}
+                            <span className="text-xs text-amber-400 font-mono">
+                              {"★".repeat(pat.importance || 5)}
+                            </span>
+                          </div>
+                          <span className="text-xs text-muted-foreground block truncate">
+                            Track: {pat.topic?.name || "Unassigned"} • {pat._count?.problems ?? 0} Problems Attached
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => openAddProblemModal(pat.topicId || pat.topic?.id, pat.id)}
+                          className="text-xs h-7 px-2.5 text-emerald-500 border-emerald-500/30 hover:bg-emerald-500/10 cursor-pointer"
+                        >
+                          <Plus className="h-3 w-3 mr-0.5" />
+                          <span>Add Problem</span>
+                        </Button>
+                        <Link href={`/patterns/${pat.slug}`} target="_blank">
+                          <Button size="sm" variant="ghost" className="text-xs h-7 px-2.5">
+                            <ExternalLink className="h-3 w-3 mr-1" />
+                            <span>Preview</span>
+                          </Button>
+                        </Link>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => openEditPattern(pat)}
+                          className="text-xs h-7 px-2.5 gap-1 cursor-pointer"
+                        >
+                          <Edit2 className="h-3 w-3" />
+                          <span>Edit</span>
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setItemToDelete({ type: "pattern", id: pat.id, name: pat.name })}
+                          className="text-xs h-7 px-2.5 gap-1 text-destructive hover:bg-destructive/10 cursor-pointer"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                          <span>Delete</span>
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </Card>
+          )}
         </TabsContent>
 
         {/* ============================================================== */}
@@ -1752,12 +2232,32 @@ export default function AdminPage() {
               </div>
               <button
                 type="button"
-                onClick={() => setShowPatternModal(false)}
+                onClick={() => {
+                  setShowPatternModal(false);
+                  setPatternModalSuccess(null);
+                }}
                 className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
+
+            {/* In-Modal Success Banner */}
+            {patternModalSuccess && (
+              <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-3 text-xs font-semibold text-emerald-400 flex items-center justify-between animate-in fade-in duration-200">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
+                  <span>{patternModalSuccess}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPatternModalSuccess(null)}
+                  className="cursor-pointer"
+                >
+                  <X className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
+                </button>
+              </div>
+            )}
 
             <form onSubmit={handleCreatePattern} className="space-y-4 overflow-y-auto pr-1 flex-1 text-xs">
               <Tabs value={patternModalTab} onValueChange={(v) => setPatternModalTab(v as any)} className="w-full">
@@ -2032,10 +2532,13 @@ export default function AdminPage() {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => setShowPatternModal(false)}
+                  onClick={() => {
+                    setShowPatternModal(false);
+                    setPatternModalSuccess(null);
+                  }}
                   className="text-xs"
                 >
-                  Cancel
+                  Close
                 </Button>
                 <Button type="submit" size="sm" disabled={isSubmittingPattern} className="text-xs gap-1.5">
                   {isSubmittingPattern ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
@@ -2377,64 +2880,256 @@ export default function AdminPage() {
       {/* ========================================================================= */}
       {/* 5. MODAL: CREATE PROBLEM */}
       {/* ========================================================================= */}
-      {showProblemModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="relative w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-5">
-            <div className="flex items-center justify-between border-b border-border pb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-500 font-bold">
-                  <FileText className="h-5 w-5" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-bold text-foreground">Add Practice Problem</h2>
-                  <p className="text-xs text-muted-foreground">Register a canonical question and link it to a pattern</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowProblemModal(false)}
-                className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
+      {/* ========================================================================= */}
+      {/* 5. MODAL: CREATE PROBLEM (WITH TOPIC BOX & TOPIC-FILTERED PATTERNS & PLATFORM CLICK SELECT) */}
+      {/* ========================================================================= */}
+      {showProblemModal && (() => {
+        const selectedTopic = topics.find((t) => t.id === newProblemTopicId) || topics[0];
+        const patternsInTopic = patterns.filter(
+          (p) => (selectedTopic ? p.topicId === selectedTopic.id || p.topic?.id === selectedTopic.id : true)
+        );
+        const filteredPatternsInTopic = newProblemPatternSearch
+          ? patternsInTopic.filter((p) =>
+              p.name.toLowerCase().includes(newProblemPatternSearch.toLowerCase()) ||
+              `#${p.number}`.includes(newProblemPatternSearch)
+            )
+          : patternsInTopic;
+        const TopicIcon = selectedTopic ? getTopicIconComponent(selectedTopic.icon, selectedTopic.slug) : Layers;
 
-            <form onSubmit={handleCreateProblem} className="space-y-4 text-xs">
-              <div className="space-y-1.5">
-                <label className="font-semibold text-foreground">Attach to Pattern</label>
-                <select
-                  className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-xs text-foreground"
-                  value={newProblemPatternId}
-                  onChange={(e) => setNewProblemPatternId(e.target.value)}
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200 overflow-y-auto">
+            <div className="relative w-full max-w-xl rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-5 my-8 max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between border-b border-border pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-500 font-bold">
+                    <FileText className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-foreground">Add Practice Problem</h2>
+                    <p className="text-xs text-muted-foreground">
+                      Select topic track, choose from only its patterns, and pick platform
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowProblemModal(false);
+                    setProblemModalSuccess(null);
+                  }}
+                  className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer"
                 >
-                  {patterns.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      #{p.number} {p.name}
-                    </option>
-                  ))}
-                </select>
+                  <X className="h-4 w-4" />
+                </button>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="font-semibold text-foreground">Problem Title</label>
-                <Input
-                  placeholder="e.g. 3Sum (LeetCode #15)"
-                  required
-                  value={newProblemTitle}
-                  onChange={(e) => setNewProblemTitle(e.target.value)}
-                />
-              </div>
+              {/* In-Modal Success Banner */}
+              {problemModalSuccess && (
+                <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-3 text-xs font-semibold text-emerald-400 flex items-center justify-between animate-in fade-in duration-200">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
+                    <span>{problemModalSuccess}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setProblemModalSuccess(null)}
+                    className="cursor-pointer"
+                  >
+                    <X className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
+                  </button>
+                </div>
+              )}
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label className="font-semibold text-foreground">Platform</label>
+              <form onSubmit={handleCreateProblem} className="space-y-4 text-xs">
+                {/* 1. TOPIC SELECTION & TOPIC BOX (EXACT SCREENSHOT STYLE) */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="font-semibold text-foreground flex items-center gap-1.5">
+                      <FolderPlus className="h-3.5 w-3.5 text-primary" />
+                      <span>1. Select Curriculum Topic / Track</span>
+                    </label>
+                    <span className="text-[11px] text-muted-foreground">
+                      {topics.length} tracks available
+                    </span>
+                  </div>
+
+                  <select
+                    className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-xs text-foreground font-medium cursor-pointer focus:ring-1 focus:ring-primary"
+                    value={newProblemTopicId}
+                    onChange={(e) => {
+                      const nextTopicId = e.target.value;
+                      setNewProblemTopicId(nextTopicId);
+                      const topicPats = patterns.filter(
+                        (p) => p.topicId === nextTopicId || p.topic?.id === nextTopicId
+                      );
+                      if (topicPats.length > 0) {
+                        setNewProblemPatternId(topicPats[0].id);
+                      } else {
+                        setNewProblemPatternId("");
+                      }
+                      setNewProblemPatternSearch("");
+                    }}
+                  >
+                    {topics.map((t) => {
+                      const count = patterns.filter((p) => p.topicId === t.id || p.topic?.id === t.id).length;
+                      return (
+                        <option key={t.id} value={t.id}>
+                          {t.name} ({count} Patterns)
+                        </option>
+                      );
+                    })}
+                  </select>
+
+                  {/* Topic Card Display Box (Matches user screenshot) */}
+                  {selectedTopic && (
+                    <div className="rounded-xl border border-border/80 bg-muted/20 p-3.5 flex items-center justify-between gap-3 animate-in fade-in duration-150">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary font-bold border border-primary/20">
+                          <TopicIcon className="h-5 w-5" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-bold text-sm text-foreground">{selectedTopic.name}</span>
+                            <Badge variant="secondary" className="text-[10px] font-semibold">
+                              {patternsInTopic.length} Patterns
+                            </Badge>
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "text-[9px]",
+                                selectedTopic.published
+                                  ? "text-emerald-500 border-emerald-500/30 bg-emerald-500/5"
+                                  : "text-amber-500 border-amber-500/30 bg-amber-500/5"
+                              )}
+                            >
+                              {selectedTopic.published ? "PUBLISHED" : "DRAFT"}
+                            </Badge>
+                          </div>
+                          <p className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">
+                            {selectedTopic.description || "DSA curriculum pattern collection."}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* 2. ATTACH TO PATTERN (FILTERED ONLY TO SELECTED TOPIC) */}
+                <div className="space-y-2 pt-1 border-t border-border/60">
+                  <div className="flex items-center justify-between">
+                    <label className="font-semibold text-foreground flex items-center gap-1.5">
+                      <Sparkles className="h-3.5 w-3.5 text-emerald-500" />
+                      <span>2. Attach to Pattern under &quot;{selectedTopic?.name || "Topic"}&quot;</span>
+                    </label>
+                    <span className="text-[11px] text-muted-foreground font-mono">
+                      {patternsInTopic.length} pattern{patternsInTopic.length === 1 ? "" : "s"} in this topic
+                    </span>
+                  </div>
+
+                  {patternsInTopic.length > 0 ? (
+                    <div className="space-y-1.5">
+                      {patternsInTopic.length > 4 && (
+                        <div className="relative">
+                          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                          <Input
+                            placeholder="Filter pattern by name or #..."
+                            value={newProblemPatternSearch}
+                            onChange={(e) => setNewProblemPatternSearch(e.target.value)}
+                            className="pl-8 text-xs h-8 bg-background"
+                          />
+                        </div>
+                      )}
+                      <select
+                        className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-xs text-foreground cursor-pointer focus:ring-1 focus:ring-emerald-500"
+                        value={newProblemPatternId}
+                        onChange={(e) => setNewProblemPatternId(e.target.value)}
+                      >
+                        {filteredPatternsInTopic.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            #{p.number} - {p.name} [{p.difficulty}]
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : (
+                    <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-500 flex items-center justify-between">
+                      <span>No patterns under &quot;{selectedTopic?.name}&quot; yet.</span>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => openAddPatternModal(selectedTopic?.id, selectedTopic?.name)}
+                        className="text-xs h-7 text-amber-500 border-amber-500/30 hover:bg-amber-500/20"
+                      >
+                        + Create Pattern First
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                {/* 3. PROBLEM TITLE */}
+                <div className="space-y-1.5 pt-1 border-t border-border/60">
+                  <label className="font-semibold text-foreground">3. Problem Title</label>
                   <Input
-                    placeholder="LeetCode / GFG / Codeforces"
-                    value={newProblemPlatform}
-                    onChange={(e) => setNewProblemPlatform(e.target.value)}
+                    placeholder="e.g. 3Sum (LeetCode #15)"
+                    required
+                    value={newProblemTitle}
+                    onChange={(e) => setNewProblemTitle(e.target.value)}
                   />
                 </div>
 
+                {/* 4. PLATFORM SELECTION (CLICKABLE BUTTONS + QUICK SELECT) */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="font-semibold text-foreground">4. Platform</label>
+                    <span className="text-[11px] text-muted-foreground">Click to select quickly</span>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {PLATFORM_OPTIONS.map((plat) => {
+                      const isSelected = newProblemPlatform === plat.value || (plat.value === "Other" && !PLATFORM_OPTIONS.slice(0, 5).some((p) => p.value === newProblemPlatform));
+                      return (
+                        <button
+                          key={plat.value}
+                          type="button"
+                          onClick={() => {
+                            if (plat.value === "Other") {
+                              setNewProblemPlatform(newProblemCustomPlatform || "Other");
+                            } else {
+                              setNewProblemPlatform(plat.value);
+                            }
+                          }}
+                          className={cn(
+                            "px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer flex items-center gap-1",
+                            isSelected
+                              ? "bg-primary text-primary-foreground border-primary shadow-sm ring-1 ring-primary/30"
+                              : cn("border-border text-muted-foreground hover:text-foreground", plat.color)
+                          )}
+                        >
+                          {isSelected && <Check className="h-3 w-3 mr-0.5" />}
+                          <span>{plat.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Custom platform input if "Other" or custom name is used */}
+                  {(!PLATFORM_OPTIONS.slice(0, 5).some((p) => p.value === newProblemPlatform) || newProblemPlatform === "Other") && (
+                    <div className="pt-1">
+                      <Input
+                        placeholder="Enter custom platform name (e.g. CodeChef, AtCoder, InterviewBit)..."
+                        value={newProblemPlatform === "Other" ? newProblemCustomPlatform : newProblemPlatform}
+                        onChange={(e) => {
+                          setNewProblemCustomPlatform(e.target.value);
+                          setNewProblemPlatform(e.target.value || "Other");
+                        }}
+                        className="text-xs h-8 bg-background"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* 5. DIFFICULTY & SOLVE URL */}
                 <div className="space-y-1.5">
                   <label className="font-semibold text-foreground">Difficulty</label>
                   <select
@@ -2447,58 +3142,68 @@ export default function AdminPage() {
                     <option value="HARD">HARD</option>
                   </select>
                 </div>
-              </div>
 
-              <div className="space-y-1.5">
-                <label className="font-semibold text-foreground">Solve URL</label>
-                <Input
-                  placeholder="https://leetcode.com/problems/reverse-integer/"
-                  required
-                  value={newProblemUrl}
-                  onChange={(e) => setNewProblemUrl(e.target.value)}
-                />
-                <p className="text-[11px] text-muted-foreground">https:// will be added automatically if omitted.</p>
-              </div>
+                <div className="space-y-1.5">
+                  <label className="font-semibold text-foreground">Solve URL</label>
+                  <Input
+                    placeholder="https://leetcode.com/problems/..."
+                    required
+                    value={newProblemUrl}
+                    onChange={(e) => handleSolveUrlChange(e.target.value, setNewProblemUrl, setNewProblemPlatform)}
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    Pasting LeetCode/GFG URLs will automatically set the platform option.
+                  </p>
+                </div>
 
-              <div className="flex items-center gap-2 pt-1">
-                <input
-                  type="checkbox"
-                  id="probCore"
-                  checked={newProblemIsCore}
-                  onChange={(e) => setNewProblemIsCore(e.target.checked)}
-                  className="rounded border-input text-primary focus:ring-primary"
-                />
-                <label htmlFor="probCore" className="text-xs text-muted-foreground select-none cursor-pointer">
-                  Mark as Core Canonical Problem
-                </label>
-              </div>
+                <div className="flex items-center gap-2 pt-1">
+                  <input
+                    type="checkbox"
+                    id="probCore"
+                    checked={newProblemIsCore}
+                    onChange={(e) => setNewProblemIsCore(e.target.checked)}
+                    className="rounded border-input text-primary focus:ring-primary h-4 w-4"
+                  />
+                  <label htmlFor="probCore" className="text-xs text-muted-foreground select-none cursor-pointer">
+                    Mark as Core Canonical Problem for this Pattern
+                  </label>
+                </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-border">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowProblemModal(false)}
-                  className="text-xs"
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" size="sm" disabled={isSubmittingProblem} className="text-xs gap-1.5">
-                  {isSubmittingProblem ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
-                  <span>Save Problem</span>
-                </Button>
-              </div>
-            </form>
+                <div className="flex items-center justify-end gap-2 pt-3 border-t border-border">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setShowProblemModal(false);
+                      setProblemModalSuccess(null);
+                    }}
+                    className="text-xs"
+                  >
+                    Close
+                  </Button>
+                  <Button
+                    type="submit"
+                    size="sm"
+                    disabled={isSubmittingProblem || !newProblemPatternId}
+                    className="text-xs gap-1.5"
+                  >
+                    {isSubmittingProblem ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+                    <span>Save Problem</span>
+                  </Button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ========================================================================= */}
-      {/* 6. MODAL: EDIT PROBLEM */}
+      {/* 6. MODAL: EDIT PROBLEM (WITH PLATFORM CLICK SELECT & SMART URL DETECTION) */}
       {/* ========================================================================= */}
       {editingProblem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="relative w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-5">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200 overflow-y-auto">
+          <div className="relative w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-2xl space-y-5 my-8 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-border pb-3">
               <div className="flex items-center gap-2.5">
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-500 font-bold">
@@ -2506,7 +3211,7 @@ export default function AdminPage() {
                 </div>
                 <div>
                   <h2 className="text-lg font-bold text-foreground">Edit Problem: {editingProblem.title}</h2>
-                  <p className="text-xs text-muted-foreground">Modify title, difficulty, or external link</p>
+                  <p className="text-xs text-muted-foreground">Modify title, platform, difficulty, or external link</p>
                 </div>
               </div>
               <button
@@ -2528,27 +3233,65 @@ export default function AdminPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
+              {/* Platform Quick Selection Pills */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
                   <label className="font-semibold text-foreground">Platform</label>
-                  <Input
-                    value={editingProblem.platform || ""}
-                    onChange={(e) => setEditingProblem({ ...editingProblem, platform: e.target.value })}
-                  />
+                  <span className="text-[11px] text-muted-foreground">Click to select</span>
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="font-semibold text-foreground">Difficulty</label>
-                  <select
-                    className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-xs text-foreground"
-                    value={editingProblem.difficulty}
-                    onChange={(e) => setEditingProblem({ ...editingProblem, difficulty: e.target.value as any })}
-                  >
-                    <option value="EASY">EASY</option>
-                    <option value="MEDIUM">MEDIUM</option>
-                    <option value="HARD">HARD</option>
-                  </select>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {PLATFORM_OPTIONS.map((plat) => {
+                    const currentPlatform = editingProblem.platform || "LeetCode";
+                    const isSelected = currentPlatform === plat.value || (plat.value === "Other" && !PLATFORM_OPTIONS.slice(0, 5).some((p) => p.value === currentPlatform));
+                    return (
+                      <button
+                        key={plat.value}
+                        type="button"
+                        onClick={() => {
+                          if (plat.value === "Other") {
+                            setEditingProblem({ ...editingProblem, platform: "Other" });
+                          } else {
+                            setEditingProblem({ ...editingProblem, platform: plat.value });
+                          }
+                        }}
+                        className={cn(
+                          "px-3 py-1 rounded-lg border text-xs font-semibold transition-all cursor-pointer flex items-center gap-1",
+                          isSelected
+                            ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                            : cn("border-border text-muted-foreground hover:text-foreground", plat.color)
+                        )}
+                      >
+                        {isSelected && <Check className="h-3 w-3 mr-0.5" />}
+                        <span>{plat.label}</span>
+                      </button>
+                    );
+                  })}
                 </div>
+
+                {(!PLATFORM_OPTIONS.slice(0, 5).some((p) => p.value === (editingProblem.platform || "")) || editingProblem.platform === "Other") && (
+                  <div className="pt-1">
+                    <Input
+                      placeholder="Custom platform name..."
+                      value={editingProblem.platform === "Other" ? "" : (editingProblem.platform || "")}
+                      onChange={(e) => setEditingProblem({ ...editingProblem, platform: e.target.value })}
+                      className="text-xs h-8 bg-background"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="font-semibold text-foreground">Difficulty</label>
+                <select
+                  className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-xs text-foreground"
+                  value={editingProblem.difficulty}
+                  onChange={(e) => setEditingProblem({ ...editingProblem, difficulty: e.target.value as any })}
+                >
+                  <option value="EASY">EASY</option>
+                  <option value="MEDIUM">MEDIUM</option>
+                  <option value="HARD">HARD</option>
+                </select>
               </div>
 
               <div className="space-y-1.5">
@@ -2557,7 +3300,13 @@ export default function AdminPage() {
                   required
                   placeholder="https://leetcode.com/problems/..."
                   value={editingProblem.solveUrl}
-                  onChange={(e) => setEditingProblem({ ...editingProblem, solveUrl: e.target.value })}
+                  onChange={(e) =>
+                    handleSolveUrlChange(
+                      e.target.value,
+                      (val) => setEditingProblem({ ...editingProblem, solveUrl: val }),
+                      (plat) => setEditingProblem((prev) => (prev ? { ...prev, platform: plat } : null))
+                    )
+                  }
                 />
                 <p className="text-[11px] text-muted-foreground">https:// will be added automatically if omitted.</p>
               </div>

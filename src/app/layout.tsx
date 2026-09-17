@@ -34,13 +34,12 @@ const THEME_INIT_SCRIPT = `
 (function() {
   try {
     var stored = localStorage.getItem('patterniq_theme');
-    var isDark = false;
+    var isDark = true;
     if (stored === 'dark' || stored === 'light') {
       isDark = stored === 'dark';
     } else {
-      var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-      isDark = prefersDark;
-      localStorage.setItem('patterniq_theme', isDark ? 'dark' : 'light');
+      isDark = true;
+      localStorage.setItem('patterniq_theme', 'dark');
     }
     if (isDark) {
       document.documentElement.classList.add('dark');
@@ -56,7 +55,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html
       lang="en"
       suppressHydrationWarning
-      className={cn("font-sans scroll-smooth", inter.variable, plusJakarta.variable, jetbrainsMono.variable)}
+      className={cn("dark font-sans scroll-smooth", inter.variable, plusJakarta.variable, jetbrainsMono.variable)}
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />

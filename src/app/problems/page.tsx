@@ -59,9 +59,19 @@ interface PatternWithProblems {
   slug: string;
   topicSlug: string;
   difficulty: string;
+  importance: number;
   summary: string;
   complexity: { time: string; space: string };
   problems: ProblemItem[];
+}
+
+interface ProblemNote {
+  id: string;
+  content: string;
+  problemId?: string | null;
+  patternId?: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface TopicWithPatterns {
@@ -85,15 +95,33 @@ function ProblemsContent() {
   const [expandedPatterns, setExpandedPatterns] = useState<Record<string, boolean>>({});
   const [problemStates, setProblemStates] = useState<Record<string, { status: string; isStarred: boolean }>>({});
 
+  // Per-problem notes state
+  const [problemNotes, setProblemNotes] = useState<Record<string, ProblemNote>>({});
+  const [activeNoteProblemId, setActiveNoteProblemId] = useState<string | null>(null);
+  const [noteDraftText, setNoteDraftText] = useState("");
+  const [isSavingNote, setIsSavingNote] = useState(false);
+  const [isDeletingNote, setIsDeletingNote] = useState(false);
+
   // Fetch live problems catalog and user progress on mount
   useEffect(() => {
     async function loadCatalogAndProgress() {
       setIsLoading(true);
       try {
-        const [catalogRes, progressRes] = await Promise.all([
+        const [catalogRes, progressRes, notesRes] = await Promise.all([
           apiClient<any[]>("/problems/catalog"),
           apiClient<{ problemProgress?: Array<{ problemId: string; status: string }> }>("/progress"),
+          apiClient<ProblemNote[]>("/notes").catch(() => ({ success: false, data: [] })),
         ]);
+
+        if (notesRes.success && Array.isArray(notesRes.data)) {
+          const nMap: Record<string, ProblemNote> = {};
+          notesRes.data.forEach((note) => {
+            if (note.problemId) {
+              nMap[note.problemId] = note;
+            }
+          });
+          setProblemNotes(nMap);
+        }
 
         if (catalogRes.success && Array.isArray(catalogRes.data)) {
           const loadedTopics: TopicWithPatterns[] = catalogRes.data.map((topic: any) => ({
@@ -102,32 +130,39 @@ function ProblemsContent() {
             slug: topic.slug,
             description: topic.description || "",
             order: topic.order || 0,
-            patterns: (topic.patterns || []).map((pat: any) => ({
-              id: pat.id,
-              number: pat.number,
-              name: pat.name,
-              slug: pat.slug,
-              topicSlug: topic.slug,
-              difficulty: pat.difficulty || "MEDIUM",
-              summary: pat.shortDescription || pat.whatIsThis || "",
-              complexity: {
-                time: pat.timeComplexity || "O(N)",
-                space: pat.spaceComplexity || "O(1)",
-              },
-              problems: (pat.problems || []).map((pItem: any, idx: number) => {
-                const prob = pItem.problem || pItem;
-                return {
-                  id: prob.id,
-                  title: prob.title,
-                  slug: prob.slug,
-                  difficulty: prob.difficulty || "EASY",
-                  platform: prob.platform || "LeetCode",
-                  solveUrl: prob.solveUrl || `https://leetcode.com/problemset/all/`,
-                  orderIndex: pItem.order || idx + 1,
-                  status: "NOT_ATTEMPTED",
-                };
-              }),
-            })),
+            patterns: (topic.patterns || [])
+              .slice()
+              .sort((a: any, b: any) => (a.number ?? 0) - (b.number ?? 0) || (a.order ?? 0) - (b.order ?? 0))
+              .map((pat: any) => ({
+                id: pat.id,
+                number: pat.number,
+                name: pat.name,
+                slug: pat.slug,
+                topicSlug: topic.slug,
+                difficulty: pat.difficulty || "MEDIUM",
+                importance: pat.importance ?? 5,
+                summary: pat.shortDescription || pat.whatIsThis || "",
+                complexity: {
+                  time: pat.timeComplexity || "O(N)",
+                  space: pat.spaceComplexity || "O(1)",
+                },
+                problems: (pat.problems || [])
+                  .slice()
+                  .sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0))
+                  .map((pItem: any, idx: number) => {
+                    const prob = pItem.problem || pItem;
+                    return {
+                      id: prob.id,
+                      title: prob.title,
+                      slug: prob.slug,
+                      difficulty: prob.difficulty || "EASY",
+                      platform: prob.platform || "LeetCode",
+                      solveUrl: prob.solveUrl || `https://leetcode.com/problemset/all/`,
+                      orderIndex: pItem.order || idx + 1,
+                      status: "NOT_ATTEMPTED",
+                    };
+                  }),
+              })),
           }));
 
           setRawTopics(loadedTopics);
@@ -160,16 +195,7 @@ function ProblemsContent() {
             });
           }
 
-          // Default expand the first 2 topics and patterns if no explicit target
-          if (!hasExplicitTarget) {
-            loadedTopics.forEach((t, i) => {
-              if (i < 2) expT[t.slug] = true;
-              t.patterns.forEach((p) => {
-                expP[p.id] = true;
-              });
-            });
-          }
-
+          // By default, keep all topics and patterns collapsed unless explicitly targeted by searchParams
           setExpandedTopics(expT);
           setExpandedPatterns(expP);
         }
@@ -287,6 +313,71 @@ function ProblemsContent() {
         [probId]: { ...current, isStarred: !current.isStarred },
       };
     });
+  };
+
+  // Open / toggle note editor for a problem
+  const handleOpenNote = (problemId: string) => {
+    if (activeNoteProblemId === problemId) {
+      setActiveNoteProblemId(null);
+    } else {
+      setActiveNoteProblemId(problemId);
+      setNoteDraftText(problemNotes[problemId]?.content || "");
+    }
+  };
+
+  // Save / Update note for a problem
+  const handleSaveNote = async (problemId: string, patternId?: string) => {
+    if (!noteDraftText.trim()) return;
+    setIsSavingNote(true);
+    try {
+      const existing = problemNotes[problemId];
+      if (existing) {
+        const res = await apiClient<ProblemNote>(`/notes/${existing.id}`, {
+          method: "PATCH",
+          body: JSON.stringify({ content: noteDraftText.trim() }),
+        });
+        if (res.success && res.data) {
+          setProblemNotes((prev) => ({ ...prev, [problemId]: res.data! }));
+        }
+      } else {
+        const res = await apiClient<ProblemNote>("/notes", {
+          method: "POST",
+          body: JSON.stringify({
+            content: noteDraftText.trim(),
+            problemId,
+            patternId,
+          }),
+        });
+        if (res.success && res.data) {
+          setProblemNotes((prev) => ({ ...prev, [problemId]: res.data! }));
+        }
+      }
+    } catch (err) {
+      console.error("Failed to save note", err);
+    } finally {
+      setIsSavingNote(false);
+    }
+  };
+
+  // Delete note for a problem
+  const handleDeleteNote = async (problemId: string) => {
+    const existing = problemNotes[problemId];
+    if (!existing) return;
+    setIsDeletingNote(true);
+    try {
+      await apiClient(`/notes/${existing.id}`, { method: "DELETE" });
+      setProblemNotes((prev) => {
+        const next = { ...prev };
+        delete next[problemId];
+        return next;
+      });
+      setNoteDraftText("");
+      setActiveNoteProblemId(null);
+    } catch (err) {
+      console.error("Failed to delete note", err);
+    } finally {
+      setIsDeletingNote(false);
+    }
   };
 
   const toggleTopic = (slug: string) => {
@@ -686,6 +777,13 @@ function ProblemsContent() {
                                           <Badge variant={pat.difficulty === "EASY" ? "easy" : "medium"}>
                                             {pat.difficulty}
                                           </Badge>
+                                          {/* PATTERN IMPORTANCE STAR RATING */}
+                                          <span
+                                            className="text-xs text-amber-400 font-mono tracking-tighter"
+                                            title={`Importance: ${pat.importance || 5}/5 stars`}
+                                          >
+                                            {"★".repeat(Math.max(1, Math.min(5, pat.importance || 5)))}
+                                          </span>
                                           {isAllPatternSolved && (
                                             <Badge variant="solved" className="text-[10px] py-0 px-1.5">
                                               Mastered
@@ -739,62 +837,162 @@ function ProblemsContent() {
                                                 isSolved ? "bg-emerald-500/5" : "hover:bg-muted/30"
                                               )}
                                             >
-                                              {/* Left: Checkmark + Title + Platform */}
-                                              <div className="flex items-start sm:items-center gap-3 min-w-0">
-                                                {/* CHECKMARK OPTION */}
-                                                <button
-                                                  type="button"
-                                                  onClick={() => toggleSolved(prob.id)}
-                                                  className={cn(
-                                                    "mt-0.5 sm:mt-0 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border transition-all cursor-pointer",
-                                                    isSolved
-                                                      ? "bg-emerald-500 border-emerald-500 text-white shadow-xs"
-                                                      : "border-border hover:border-emerald-500/60 bg-background text-transparent hover:text-muted-foreground/30"
-                                                  )}
-                                                  title={isSolved ? "Mark as unsolved" : "Mark as solved"}
-                                                >
-                                                  <CheckCircle2 className="h-4 w-4" />
-                                                </button>
-
-                                                {/* STAR / BOOKMARK OPTION */}
-                                                <button
-                                                  type="button"
-                                                  onClick={() => toggleStarred(prob.id)}
-                                                  className={cn(
-                                                    "flex h-6 w-6 shrink-0 items-center justify-center rounded transition-colors cursor-pointer",
-                                                    prob.isStarred
-                                                      ? "text-amber-400 hover:text-amber-500"
-                                                      : "text-muted-foreground/40 hover:text-amber-400"
-                                                  )}
-                                                  title={prob.isStarred ? "Remove from starred" : "Star problem"}
-                                                >
-                                                  <Star className={cn("h-4 w-4", prob.isStarred && "fill-current")} />
-                                                </button>
-
-                                                <div className="space-y-0.5 min-w-0">
-                                                  <div className="flex items-center gap-2 flex-wrap">
-                                                    <span
+                                              {/* Left: Checkmark + Star + Note + Title + Platform */}
+                                              <div className="flex flex-col gap-2 min-w-0 flex-1">
+                                                <div className="flex items-start sm:items-center justify-between sm:justify-start gap-3 min-w-0">
+                                                  <div className="flex items-center gap-2 shrink-0">
+                                                    {/* CHECKMARK OPTION */}
+                                                    <button
+                                                      type="button"
+                                                      onClick={() => toggleSolved(prob.id)}
                                                       className={cn(
-                                                        "text-sm font-semibold transition-all",
+                                                        "flex h-6 w-6 shrink-0 items-center justify-center rounded-md border transition-all cursor-pointer",
                                                         isSolved
-                                                          ? "line-through text-muted-foreground"
-                                                          : "text-foreground"
+                                                          ? "bg-emerald-500 border-emerald-500 text-white shadow-xs"
+                                                          : "border-border hover:border-emerald-500/60 bg-background text-transparent hover:text-muted-foreground/30"
                                                       )}
+                                                      title={isSolved ? "Mark as unsolved" : "Mark as solved"}
                                                     >
-                                                      {prob.title}
-                                                    </span>
-                                                    <Badge variant={prob.difficulty === "EASY" ? "easy" : "medium"}>
-                                                      {prob.difficulty}
-                                                    </Badge>
+                                                      <CheckCircle2 className="h-4 w-4" />
+                                                    </button>
+
+                                                    {/* STAR / BOOKMARK OPTION */}
+                                                    <button
+                                                      type="button"
+                                                      onClick={() => toggleStarred(prob.id)}
+                                                      className={cn(
+                                                        "flex h-6 w-6 shrink-0 items-center justify-center rounded transition-colors cursor-pointer",
+                                                        prob.isStarred
+                                                          ? "text-amber-400 hover:text-amber-500"
+                                                          : "text-muted-foreground/40 hover:text-amber-400"
+                                                      )}
+                                                      title={prob.isStarred ? "Remove from starred" : "Star problem"}
+                                                    >
+                                                      <Star className={cn("h-4 w-4", prob.isStarred && "fill-current")} />
+                                                    </button>
+
+                                                    {/* NOTE BUTTON */}
+                                                    <button
+                                                      type="button"
+                                                      onClick={() => handleOpenNote(prob.id)}
+                                                      className={cn(
+                                                        "flex h-6 w-6 shrink-0 items-center justify-center rounded transition-colors cursor-pointer relative",
+                                                        problemNotes[prob.id]
+                                                          ? "text-primary bg-primary/10 hover:bg-primary/20"
+                                                          : "text-muted-foreground/40 hover:text-primary hover:bg-muted/50"
+                                                      )}
+                                                      title={problemNotes[prob.id] ? "View / edit note" : "Add note for this problem"}
+                                                    >
+                                                      <FileText className="h-3.5 w-3.5" />
+                                                      {problemNotes[prob.id] && (
+                                                        <span className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-primary ring-1 ring-background" />
+                                                      )}
+                                                    </button>
                                                   </div>
-                                                  <span className="text-xs font-mono text-muted-foreground block">
-                                                    {prob.platform}
-                                                  </span>
+
+                                                  <div className="space-y-0.5 min-w-0">
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                      <span
+                                                        className={cn(
+                                                          "text-sm font-semibold transition-all",
+                                                          isSolved
+                                                            ? "line-through text-muted-foreground"
+                                                            : "text-foreground"
+                                                        )}
+                                                      >
+                                                        {prob.title}
+                                                      </span>
+                                                      <Badge variant={prob.difficulty === "EASY" ? "easy" : "medium"}>
+                                                        {prob.difficulty}
+                                                      </Badge>
+                                                    </div>
+                                                    <span className="text-xs font-mono text-muted-foreground block">
+                                                      {prob.platform}
+                                                    </span>
+                                                  </div>
                                                 </div>
+
+                                                {/* NOTE PREVIEW CHIP IF EXISTS & NOT OPEN */}
+                                                {problemNotes[prob.id] && activeNoteProblemId !== prob.id && (
+                                                  <div
+                                                    onClick={() => handleOpenNote(prob.id)}
+                                                    className="mt-1 flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground bg-muted/40 hover:bg-muted/70 border border-border/50 rounded-md px-2.5 py-1.5 cursor-pointer transition-colors max-w-xl group"
+                                                    title="Click to edit your note"
+                                                  >
+                                                    <FileText className="h-3.5 w-3.5 text-primary shrink-0 group-hover:scale-105 transition-transform" />
+                                                    <span className="truncate italic font-sans text-[11px] text-foreground/80">
+                                                      {problemNotes[prob.id].content}
+                                                    </span>
+                                                  </div>
+                                                )}
+
+                                                {/* INLINE NOTE EDITOR */}
+                                                {activeNoteProblemId === prob.id && (
+                                                  <div className="mt-2 p-3 sm:p-4 rounded-lg bg-muted/30 border border-border/80 space-y-3 animate-in slide-in-from-top-1 duration-200">
+                                                    <div className="flex items-center justify-between">
+                                                      <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                                                        <FileText className="h-3.5 w-3.5 text-primary" />
+                                                        <span>Personal Note for {prob.title}</span>
+                                                        {problemNotes[prob.id] && (
+                                                          <span className="text-[10px] text-muted-foreground font-normal">
+                                                            (Saved {new Date(problemNotes[prob.id].updatedAt).toLocaleDateString()})
+                                                          </span>
+                                                        )}
+                                                      </div>
+                                                      {problemNotes[prob.id] && (
+                                                        <Button
+                                                          type="button"
+                                                          variant="ghost"
+                                                          size="sm"
+                                                          onClick={() => handleDeleteNote(prob.id)}
+                                                          disabled={isDeletingNote}
+                                                          className="h-6 px-2 text-[11px] text-destructive hover:bg-destructive/10 cursor-pointer"
+                                                        >
+                                                          Delete Note
+                                                        </Button>
+                                                      )}
+                                                    </div>
+
+                                                    <textarea
+                                                      value={noteDraftText}
+                                                      onChange={(e) => setNoteDraftText(e.target.value)}
+                                                      placeholder="Write your short note, key pattern trick, edge cases, or revision tips for this problem..."
+                                                      className="w-full min-h-[75px] text-xs p-2.5 rounded-md border border-border bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary resize-y font-sans placeholder:text-muted-foreground/60 leading-relaxed"
+                                                      rows={3}
+                                                    />
+
+                                                    <div className="flex items-center justify-between gap-2">
+                                                      <span className="text-[10px] text-muted-foreground font-mono">
+                                                        {noteDraftText.length} / 5000 chars
+                                                      </span>
+                                                      <div className="flex items-center gap-2">
+                                                        <Button
+                                                          type="button"
+                                                          variant="outline"
+                                                          size="sm"
+                                                          onClick={() => setActiveNoteProblemId(null)}
+                                                          className="h-7 text-xs px-2.5 cursor-pointer"
+                                                        >
+                                                          Close
+                                                        </Button>
+                                                        <Button
+                                                          type="button"
+                                                          size="sm"
+                                                          disabled={isSavingNote || !noteDraftText.trim()}
+                                                          onClick={() => handleSaveNote(prob.id, pat.id)}
+                                                          className="h-7 text-xs px-3 gap-1.5 cursor-pointer"
+                                                        >
+                                                          {isSavingNote && <Loader2 className="h-3 w-3 animate-spin" />}
+                                                          <span>{problemNotes[prob.id] ? "Update Note" : "Save Note"}</span>
+                                                        </Button>
+                                                      </div>
+                                                    </div>
+                                                  </div>
+                                                )}
                                               </div>
 
                                               {/* Right: Solved status + START BUTTON */}
-                                              <div className="flex items-center justify-between sm:justify-end gap-2.5 shrink-0 pl-9 sm:pl-0">
+                                              <div className="flex items-center justify-between sm:justify-end gap-2.5 shrink-0 pl-9 sm:pl-0 self-end sm:self-center">
                                                 {isSolved && (
                                                   <Badge variant="solved" className="text-[11px] gap-1 py-0.5">
                                                     <CheckCircle2 className="h-3 w-3" /> Solved
@@ -814,7 +1012,8 @@ function ProblemsContent() {
                                                   <ExternalLink className="h-3 w-3 opacity-70" />
                                                 </a>
                                               </div>
-                                            </div>                                          );
+                                            </div>
+                                          );
                                         })
                                       ) : (
                                         <div className="p-4 text-center text-xs text-muted-foreground">
