@@ -176,8 +176,8 @@ export function Footer() {
           {/* Left: Copyright & Made with ❤️ by Suvamoy */}
           <div className="flex items-center gap-2.5 flex-wrap justify-center rounded-full border border-border/70 bg-card/70 dark:bg-[#12151c]/80 backdrop-blur-md px-4 py-1.5 shadow-2xs text-xs">
             <p>© {new Date().getFullYear()} PatternIQ.</p>
-            <span className="text-border">•</span>
-            <div className="flex items-center gap-1.5">
+            {/* <span className="text-border">•</span> */}
+            {/* <div className="flex items-center gap-1.5">
               <span className="text-muted-foreground">Made with</span>
               <Heart className="h-3.5 w-3.5 text-rose-500 fill-rose-500 inline animate-pulse mx-0.5" />
               <span className="text-muted-foreground">by</span>
@@ -189,7 +189,7 @@ export function Footer() {
               >
                 Suvamoy
               </a>
-            </div>
+            </div> */}
           </div>
 
           {/* Center: Social Links (Twitter / X and GitHub) */}
