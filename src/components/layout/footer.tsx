@@ -178,8 +178,6 @@ export function Footer() {
             <p>© {new Date().getFullYear()} PatternIQ.</p>
             <span className="text-border">•</span>
             <div className="flex items-center gap-1.5">
-              <span className="text-muted-foreground">Made with</span>
-              <Heart className="h-3.5 w-3.5 text-rose-500 fill-rose-500 inline animate-pulse mx-0.5" />
               <span className="text-muted-foreground">by</span>
               <a
                 href="https://github.com/samnatasuvamoy99"

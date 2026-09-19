@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
@@ -22,6 +22,7 @@ import {
   TrendingUp,
   Terminal,
   ListOrdered,
+  Eye,
 } from "lucide-react";
 
 const TWO_SUM_CODE: Record<string, { code: string; lang: string; title: string }> = {
@@ -112,6 +113,80 @@ const TWO_SUM_CODE: Record<string, { code: string; lang: string; title: string }
 export default function Home() {
   const featuredPattern = MOCK_PATTERNS[0];
   const [activeLanguage, setActiveLanguage] = useState<"python" | "cpp" | "java" | "javascript">("cpp");
+  const [views, setViews] = useState<number | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+
+    // Load instantly from client cache on mount
+    if (typeof window !== "undefined") {
+      const cached = localStorage.getItem("patterniq_cached_views");
+      if (cached && !isNaN(Number(cached))) {
+        setViews(Number(cached));
+      }
+    }
+
+    let isMounted = true;
+    async function trackViews() {
+      try {
+        const isLoggedIn =
+          typeof window !== "undefined" &&
+          !!localStorage.getItem("patterniq_access_token");
+
+        const alreadyCounted =
+          typeof window !== "undefined" &&
+          sessionStorage.getItem("visited_landing_session");
+
+        const shouldIncrement = !alreadyCounted && !isLoggedIn;
+
+        const token =
+          typeof window !== "undefined"
+            ? localStorage.getItem("patterniq_access_token")
+            : null;
+
+        const headers: Record<string, string> = {
+          "Content-Type": "application/json",
+        };
+        if (token) {
+          headers["Authorization"] = `Bearer ${token}`;
+        }
+
+        const res = await fetch(
+          shouldIncrement
+            ? "/api/v1/analytics/views"
+            : "/api/v1/analytics/views?page=landing",
+          {
+            method: shouldIncrement ? "POST" : "GET",
+            headers,
+            ...(shouldIncrement ? { body: JSON.stringify({ page: "landing" }) } : {}),
+            cache: "no-store",
+          }
+        );
+
+        if (res.ok) {
+          const json = await res.json();
+          if (isMounted && typeof json?.data?.views === "number") {
+            setViews(json.data.views);
+            if (typeof window !== "undefined") {
+              localStorage.setItem("patterniq_cached_views", String(json.data.views));
+              localStorage.setItem("patterniq_cached_views_time", String(Date.now()));
+              if (shouldIncrement) {
+                sessionStorage.setItem("visited_landing_session", "true");
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to fetch/update view count:", err);
+      }
+    }
+
+    trackViews();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   return (
     <div className="flex flex-col items-center justify-center">
@@ -129,6 +204,16 @@ export default function Home() {
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/20 to-background pointer-events-none" />
 
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 text-center relative z-10">
+          {/* Live Views Counter Pill */}
+          <div className="mb-6 inline-flex items-center gap-1.5 rounded-full border border-border/80 bg-background/85 dark:bg-card/85 backdrop-blur-md px-3.5 py-1.5 text-xs font-medium text-muted-foreground shadow-xs transition-all hover:border-primary/40">
+            <Eye className="h-3.5 w-3.5 text-primary" />
+            <span className="font-bold text-foreground" suppressHydrationWarning>
+              {mounted && views !== null
+                ? `${views.toLocaleString()} ${views === 1 ? "Visit" : "Visits"}`
+                : "Loading ..."}
+            </span>
+          </div>
+
           {/* Primary Headline */}
           <h1 className="font-heading text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-foreground leading-[1.12]">
             <span
@@ -160,7 +245,7 @@ export default function Home() {
 
           {/* Subtitle */}
           <p className="mx-auto mt-6 max-w-2xl text-base sm:text-lg text-muted-foreground font-normal leading-relaxed">
-            Every technical interview question is derived from foundational patterns. Learn the identification triggers, master multi-language templates, and commit them to memory with automated spaced repetition.
+            Every technical interview questions come down to a few core patterns. Learn the identification triggers, master multi-language templates and use spaced repetition to make them stick.
           </p>
 
           {/* Action Buttons */}
@@ -200,6 +285,7 @@ export default function Home() {
         </div>
       </section>
 
+
       {/* ========================================================================= */}
       {/* 2. STYLIZED 3-CARD FLOATING PATTERN ARCHITECTURE SHOWCASE */}
       {/* ========================================================================= */}
@@ -228,9 +314,9 @@ export default function Home() {
                 <BrainCircuit className="h-4 w-4 text-[#0369a1] dark:text-[#38bdf8]" />
                 <span>Know Your Pattern</span>
               </span>
-              <Badge variant="easy" className="text-[8.5px] px-1.5 py-0.2 font-bold bg-[#0369a1]/10 dark:bg-[#38bdf8]/15 text-[#0369a1] dark:text-[#38bdf8] border border-sky-600/10 dark:border-sky-400/20 whitespace-nowrap shrink-0">
+              {/* <Badge variant="easy" className="text-[8.5px] px-1.5 py-0.2 font-bold bg-[#0369a1]/10 dark:bg-[#38bdf8]/15 text-[#0369a1] dark:text-[#38bdf8] border border-sky-600/10 dark:border-sky-400/20 whitespace-nowrap shrink-0">
                 EASY • O(N)
-              </Badge>
+              </Badge> */}
             </div>
 
             {/* Card Content: All 5 Structured Points */}
@@ -303,7 +389,7 @@ export default function Home() {
             <div className="h-12 flex items-center justify-between bg-[#d1fae5] dark:bg-[#112520] px-4 sm:px-5 border-b border-emerald-200/40 dark:border-emerald-900/30 shrink-0 gap-2">
               <span className="text-[#065f46] dark:text-[#34d399] font-heading font-bold text-xs uppercase tracking-wider flex items-center gap-2 shrink-0">
                 <Code2 className="h-4 w-4 text-[#065f46] dark:text-[#10b981]" />
-                <span>Pseudocode Blueprint</span>
+                <span>Pseudocode</span>
               </span>
               <span className="text-[8.5px] font-mono text-[#065f46] dark:text-[#34d399] font-bold bg-[#065f46]/10 dark:bg-[#34d399]/15 px-2 py-0.5 rounded-full border border-emerald-600/10 dark:border-emerald-400/20 whitespace-nowrap shrink-0">
                 Universal Logic
@@ -363,7 +449,7 @@ export default function Home() {
             <div className="h-12 flex items-center justify-between bg-[#fef3c7] dark:bg-[#221c0e] px-4 sm:px-5 border-b border-amber-200/40 dark:border-amber-900/30 shrink-0 gap-2">
               <span className="text-[#b45309] dark:text-[#facc15] font-heading font-bold text-xs uppercase tracking-wider flex items-center gap-2 shrink-0">
                 <Terminal className="h-4 w-4 text-[#b45309] dark:text-[#facc15]" />
-                <span>Production Code</span>
+                <span>Code</span>
               </span>
               <span className="text-[8.5px] font-mono text-[#b45309] dark:text-[#facc15] font-bold bg-[#b45309]/10 dark:bg-[#facc15]/15 px-2 py-0.5 rounded-full border border-amber-600/10 dark:border-amber-400/20 whitespace-nowrap shrink-0">
                 Multi-Lang
@@ -411,12 +497,12 @@ export default function Home() {
                 <span className="text-[10px] text-muted-foreground">
                   14+ Templates Ready
                 </span>
-                <Link href="/patterns/two-pointers">
+                {/* <Link href="/patterns/two-pointers">
                   <Button size="sm" className="gap-1.5 text-[10.5px] font-semibold h-7 px-2.5 shadow-xs">
                     <span>Explore Pattern</span>
                     <ArrowRight className="h-3 w-3" />
                   </Button>
-                </Link>
+                </Link> */}
               </div>
             </div>
           </div>
@@ -429,9 +515,9 @@ export default function Home() {
       <section className="w-full border-t border-border bg-muted/20 py-24">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14 space-y-2">
-            <Badge variant="outline" className="border-border text-muted-foreground px-3 py-0.5 text-xs font-semibold">
+            {/* <Badge variant="outline" className="border-border text-muted-foreground px-3 py-0.5 text-xs font-semibold">
               Scientific Retention
-            </Badge>
+            </Badge> */}
             <h2 className="font-heading text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">
               Engineered for Long-Term Recall
             </h2>
@@ -480,9 +566,9 @@ export default function Home() {
       <section className="w-full py-24 px-4 sm:px-6 lg:px-8 max-w-6xl">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-10">
           <div className="space-y-1">
-            <Badge variant="outline" className="border-border text-muted-foreground px-3 py-0.5 text-xs font-semibold">
+            {/* <Badge variant="outline" className="border-border text-muted-foreground px-3 py-0.5 text-xs font-semibold">
               Curriculum Tracks
-            </Badge>
+            </Badge> */}
             <h2 className="font-heading text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
               Structured Algorithm Tracks
             </h2>
