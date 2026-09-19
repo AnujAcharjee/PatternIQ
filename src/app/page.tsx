@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
@@ -22,6 +22,7 @@ import {
   TrendingUp,
   Terminal,
   ListOrdered,
+  Eye,
 } from "lucide-react";
 
 const TWO_SUM_CODE: Record<string, { code: string; lang: string; title: string }> = {
@@ -112,6 +113,80 @@ const TWO_SUM_CODE: Record<string, { code: string; lang: string; title: string }
 export default function Home() {
   const featuredPattern = MOCK_PATTERNS[0];
   const [activeLanguage, setActiveLanguage] = useState<"python" | "cpp" | "java" | "javascript">("cpp");
+  const [views, setViews] = useState<number | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+
+    // Load instantly from client cache on mount
+    if (typeof window !== "undefined") {
+      const cached = localStorage.getItem("patterniq_cached_views");
+      if (cached && !isNaN(Number(cached))) {
+        setViews(Number(cached));
+      }
+    }
+
+    let isMounted = true;
+    async function trackViews() {
+      try {
+        const isLoggedIn =
+          typeof window !== "undefined" &&
+          !!localStorage.getItem("patterniq_access_token");
+
+        const alreadyCounted =
+          typeof window !== "undefined" &&
+          sessionStorage.getItem("visited_landing_session");
+
+        const shouldIncrement = !alreadyCounted && !isLoggedIn;
+
+        const token =
+          typeof window !== "undefined"
+            ? localStorage.getItem("patterniq_access_token")
+            : null;
+
+        const headers: Record<string, string> = {
+          "Content-Type": "application/json",
+        };
+        if (token) {
+          headers["Authorization"] = `Bearer ${token}`;
+        }
+
+        const res = await fetch(
+          shouldIncrement
+            ? "/api/v1/analytics/views"
+            : "/api/v1/analytics/views?page=landing",
+          {
+            method: shouldIncrement ? "POST" : "GET",
+            headers,
+            ...(shouldIncrement ? { body: JSON.stringify({ page: "landing" }) } : {}),
+            cache: "no-store",
+          }
+        );
+
+        if (res.ok) {
+          const json = await res.json();
+          if (isMounted && typeof json?.data?.views === "number") {
+            setViews(json.data.views);
+            if (typeof window !== "undefined") {
+              localStorage.setItem("patterniq_cached_views", String(json.data.views));
+              localStorage.setItem("patterniq_cached_views_time", String(Date.now()));
+              if (shouldIncrement) {
+                sessionStorage.setItem("visited_landing_session", "true");
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to fetch/update view count:", err);
+      }
+    }
+
+    trackViews();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   return (
     <div className="flex flex-col items-center justify-center">
@@ -129,6 +204,16 @@ export default function Home() {
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/20 to-background pointer-events-none" />
 
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 text-center relative z-10">
+          {/* Live Views Counter Pill */}
+          <div className="mb-6 inline-flex items-center gap-1.5 rounded-full border border-border/80 bg-background/85 dark:bg-card/85 backdrop-blur-md px-3.5 py-1.5 text-xs font-medium text-muted-foreground shadow-xs transition-all hover:border-primary/40">
+            <Eye className="h-3.5 w-3.5 text-primary" />
+            <span className="font-bold text-foreground" suppressHydrationWarning>
+              {mounted && views !== null
+                ? `${views.toLocaleString()} ${views === 1 ? "Visit" : "Visits"}`
+                : "Loading ..."}
+            </span>
+          </div>
+
           {/* Primary Headline */}
           <h1 className="font-heading text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-foreground leading-[1.12]">
             <span
@@ -199,6 +284,7 @@ export default function Home() {
           </div>
         </div>
       </section>
+
 
       {/* ========================================================================= */}
       {/* 2. STYLIZED 3-CARD FLOATING PATTERN ARCHITECTURE SHOWCASE */}
