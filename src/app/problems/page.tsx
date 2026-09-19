@@ -27,6 +27,9 @@ import {
   Sparkles,
   Trophy,
   Loader2,
+  Pencil,
+  Trash2,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -98,6 +101,7 @@ function ProblemsContent() {
   // Per-problem notes state
   const [problemNotes, setProblemNotes] = useState<Record<string, ProblemNote>>({});
   const [activeNoteProblemId, setActiveNoteProblemId] = useState<string | null>(null);
+  const [editingNoteProblemId, setEditingNoteProblemId] = useState<string | null>(null);
   const [noteDraftText, setNoteDraftText] = useState("");
   const [isSavingNote, setIsSavingNote] = useState(false);
   const [isDeletingNote, setIsDeletingNote] = useState(false);
@@ -110,7 +114,7 @@ function ProblemsContent() {
         const [catalogRes, progressRes, notesRes] = await Promise.all([
           apiClient<any[]>("/problems/catalog"),
           apiClient<{ problemProgress?: Array<{ problemId: string; status: string }> }>("/progress"),
-          apiClient<ProblemNote[]>("/notes").catch(() => ({ success: false, data: [] })),
+          apiClient<ProblemNote[]>("/notes?type=problem").catch(() => ({ success: false, data: [] })),
         ]);
 
         if (notesRes.success && Array.isArray(notesRes.data)) {
@@ -315,18 +319,42 @@ function ProblemsContent() {
     });
   };
 
-  // Open / toggle note editor for a problem
+  // Open / toggle note for a problem
   const handleOpenNote = (problemId: string) => {
     if (activeNoteProblemId === problemId) {
       setActiveNoteProblemId(null);
+      setEditingNoteProblemId(null);
     } else {
       setActiveNoteProblemId(problemId);
-      setNoteDraftText(problemNotes[problemId]?.content || "");
+      const existing = problemNotes[problemId];
+      if (existing) {
+        setEditingNoteProblemId(null); // Open in view mode so student can see what they wrote
+        setNoteDraftText(existing.content);
+      } else {
+        setEditingNoteProblemId(problemId); // No note yet, open in write mode
+        setNoteDraftText("");
+      }
+    }
+  };
+
+  const handleStartEditNote = (problemId: string) => {
+    setEditingNoteProblemId(problemId);
+    setNoteDraftText(problemNotes[problemId]?.content || "");
+  };
+
+  const handleCancelEditNote = (problemId: string) => {
+    if (problemNotes[problemId]) {
+      setEditingNoteProblemId(null); // Return to view mode
+      setNoteDraftText(problemNotes[problemId].content);
+    } else {
+      setActiveNoteProblemId(null);
+      setEditingNoteProblemId(null);
+      setNoteDraftText("");
     }
   };
 
   // Save / Update note for a problem
-  const handleSaveNote = async (problemId: string, patternId?: string) => {
+  const handleSaveNote = async (problemId: string) => {
     if (!noteDraftText.trim()) return;
     setIsSavingNote(true);
     try {
@@ -338,6 +366,7 @@ function ProblemsContent() {
         });
         if (res.success && res.data) {
           setProblemNotes((prev) => ({ ...prev, [problemId]: res.data! }));
+          setEditingNoteProblemId(null); // Return to formatted view mode
         }
       } else {
         const res = await apiClient<ProblemNote>("/notes", {
@@ -345,11 +374,11 @@ function ProblemsContent() {
           body: JSON.stringify({
             content: noteDraftText.trim(),
             problemId,
-            patternId,
           }),
         });
         if (res.success && res.data) {
           setProblemNotes((prev) => ({ ...prev, [problemId]: res.data! }));
+          setEditingNoteProblemId(null); // Return to formatted view mode
         }
       }
     } catch (err) {
@@ -373,6 +402,7 @@ function ProblemsContent() {
       });
       setNoteDraftText("");
       setActiveNoteProblemId(null);
+      setEditingNoteProblemId(null);
     } catch (err) {
       console.error("Failed to delete note", err);
     } finally {
@@ -876,16 +906,16 @@ function ProblemsContent() {
                                                       type="button"
                                                       onClick={() => handleOpenNote(prob.id)}
                                                       className={cn(
-                                                        "flex h-6 w-6 shrink-0 items-center justify-center rounded transition-colors cursor-pointer relative",
+                                                        "flex h-6 w-6 shrink-0 items-center justify-center rounded-md transition-all cursor-pointer relative",
                                                         problemNotes[prob.id]
-                                                          ? "text-primary bg-primary/10 hover:bg-primary/20"
-                                                          : "text-muted-foreground/40 hover:text-primary hover:bg-muted/50"
+                                                          ? "text-amber-400 bg-amber-500/15 border border-amber-500/30 hover:bg-amber-500/25 shadow-xs"
+                                                          : "text-muted-foreground/40 hover:text-amber-400 hover:bg-amber-500/10"
                                                       )}
                                                       title={problemNotes[prob.id] ? "View / edit note" : "Add note for this problem"}
                                                     >
                                                       <FileText className="h-3.5 w-3.5" />
                                                       {problemNotes[prob.id] && (
-                                                        <span className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-primary ring-1 ring-background" />
+                                                        <span className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-amber-400 ring-1 ring-background" />
                                                       )}
                                                     </button>
                                                   </div>
@@ -912,81 +942,119 @@ function ProblemsContent() {
                                                   </div>
                                                 </div>
 
-                                                {/* NOTE PREVIEW CHIP IF EXISTS & NOT OPEN */}
-                                                {problemNotes[prob.id] && activeNoteProblemId !== prob.id && (
-                                                  <div
-                                                    onClick={() => handleOpenNote(prob.id)}
-                                                    className="mt-1 flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground bg-muted/40 hover:bg-muted/70 border border-border/50 rounded-md px-2.5 py-1.5 cursor-pointer transition-colors max-w-xl group"
-                                                    title="Click to edit your note"
-                                                  >
-                                                    <FileText className="h-3.5 w-3.5 text-primary shrink-0 group-hover:scale-105 transition-transform" />
-                                                    <span className="truncate italic font-sans text-[11px] text-foreground/80">
-                                                      {problemNotes[prob.id].content}
-                                                    </span>
-                                                  </div>
-                                                )}
-
-                                                {/* INLINE NOTE EDITOR */}
+                                                {/* INLINE NOTE VIEW & EDITOR (Only visible when note symbol is clicked) */}
                                                 {activeNoteProblemId === prob.id && (
-                                                  <div className="mt-2 p-3 sm:p-4 rounded-lg bg-muted/30 border border-border/80 space-y-3 animate-in slide-in-from-top-1 duration-200">
-                                                    <div className="flex items-center justify-between">
-                                                      <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
-                                                        <FileText className="h-3.5 w-3.5 text-primary" />
-                                                        <span>Personal Note for {prob.title}</span>
-                                                        {problemNotes[prob.id] && (
-                                                          <span className="text-[10px] text-muted-foreground font-normal">
-                                                            (Saved {new Date(problemNotes[prob.id].updatedAt).toLocaleDateString()})
+                                                  <div className="mt-2.5 p-3.5 sm:p-4 rounded-xl bg-card border border-amber-500/30 space-y-3 animate-in slide-in-from-top-1 duration-200 shadow-sm">
+                                                    {editingNoteProblemId !== prob.id && problemNotes[prob.id] ? (
+                                                      /* ── VIEW MODE (Formatted note display) ── */
+                                                      <div className="space-y-2.5">
+                                                        <div className="flex items-center justify-between gap-2 border-b border-border/40 pb-2">
+                                                          <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
+                                                            <FileText className="h-4 w-4 text-amber-500 dark:text-amber-400 shrink-0" />
+                                                            <span>Personal Note for {prob.title}</span>
+                                                            <span className="text-[10px] text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded font-mono font-normal">
+                                                              Saved {new Date(problemNotes[prob.id].updatedAt).toLocaleDateString()}
+                                                            </span>
+                                                          </div>
+                                                          <div className="flex items-center gap-1">
+                                                            <Button
+                                                              type="button"
+                                                              variant="ghost"
+                                                              size="sm"
+                                                              onClick={() => handleStartEditNote(prob.id)}
+                                                              className="h-6 px-2 text-[11px] gap-1 text-muted-foreground hover:text-amber-500 hover:bg-amber-500/10 cursor-pointer"
+                                                              title="Edit note"
+                                                            >
+                                                              <Pencil className="h-3 w-3" />
+                                                              <span>Edit</span>
+                                                            </Button>
+                                                            <Button
+                                                              type="button"
+                                                              variant="ghost"
+                                                              size="sm"
+                                                              onClick={() => handleDeleteNote(prob.id)}
+                                                              disabled={isDeletingNote}
+                                                              className="h-6 px-2 text-[11px] gap-1 text-destructive hover:bg-destructive/10 cursor-pointer"
+                                                              title="Delete note"
+                                                            >
+                                                              <Trash2 className="h-3 w-3" />
+                                                              <span>Delete</span>
+                                                            </Button>
+                                                            <Button
+                                                              type="button"
+                                                              variant="ghost"
+                                                              size="sm"
+                                                              onClick={() => setActiveNoteProblemId(null)}
+                                                              className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground cursor-pointer"
+                                                              title="Close note"
+                                                            >
+                                                              <X className="h-3.5 w-3.5" />
+                                                            </Button>
+                                                          </div>
+                                                        </div>
+
+                                                        {/* Formatted Note Content */}
+                                                        <div className="text-xs sm:text-sm text-foreground/90 leading-relaxed whitespace-pre-wrap font-sans bg-muted/30 border border-border/50 rounded-lg p-3">
+                                                          {problemNotes[prob.id].content}
+                                                        </div>
+                                                      </div>
+                                                    ) : (
+                                                      /* ── EDIT MODE (Textarea editor) ── */
+                                                      <div className="space-y-3">
+                                                        <div className="flex items-center justify-between">
+                                                          <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
+                                                            <FileText className="h-4 w-4 text-amber-500 dark:text-amber-400" />
+                                                            <span>{problemNotes[prob.id] ? `Edit Note for ${prob.title}` : `Add Note for ${prob.title}`}</span>
+                                                          </div>
+                                                          <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => handleCancelEditNote(prob.id)}
+                                                            className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground cursor-pointer"
+                                                            title="Close editor"
+                                                          >
+                                                            <X className="h-3.5 w-3.5" />
+                                                          </Button>
+                                                        </div>
+
+                                                        <textarea
+                                                          value={noteDraftText}
+                                                          onChange={(e) => setNoteDraftText(e.target.value)}
+                                                          placeholder="Write your personal note, key pattern trick, edge cases, or revision tips for this problem..."
+                                                          className="w-full min-h-[90px] text-xs sm:text-sm p-3 rounded-lg border border-border/80 bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-amber-500/50 focus:border-amber-500/50 resize-y font-sans placeholder:text-muted-foreground/60 leading-relaxed shadow-inner"
+                                                          rows={3}
+                                                          autoFocus
+                                                        />
+
+                                                        <div className="flex items-center justify-between gap-2">
+                                                          <span className="text-[10px] text-muted-foreground font-mono">
+                                                            {noteDraftText.length} / 5000 chars
                                                           </span>
-                                                        )}
+                                                          <div className="flex items-center gap-2">
+                                                            <Button
+                                                              type="button"
+                                                              variant="outline"
+                                                              size="sm"
+                                                              onClick={() => handleCancelEditNote(prob.id)}
+                                                              className="h-7 text-xs px-2.5 cursor-pointer"
+                                                            >
+                                                              Cancel
+                                                            </Button>
+                                                            <Button
+                                                              type="button"
+                                                              size="sm"
+                                                              disabled={isSavingNote || !noteDraftText.trim()}
+                                                              onClick={() => handleSaveNote(prob.id)}
+                                                              className="h-7 text-xs px-3 gap-1.5 cursor-pointer"
+                                                            >
+                                                              {isSavingNote && <Loader2 className="h-3 w-3 animate-spin" />}
+                                                              <span>{problemNotes[prob.id] ? "Update Note" : "Save Note"}</span>
+                                                            </Button>
+                                                          </div>
+                                                        </div>
                                                       </div>
-                                                      {problemNotes[prob.id] && (
-                                                        <Button
-                                                          type="button"
-                                                          variant="ghost"
-                                                          size="sm"
-                                                          onClick={() => handleDeleteNote(prob.id)}
-                                                          disabled={isDeletingNote}
-                                                          className="h-6 px-2 text-[11px] text-destructive hover:bg-destructive/10 cursor-pointer"
-                                                        >
-                                                          Delete Note
-                                                        </Button>
-                                                      )}
-                                                    </div>
-
-                                                    <textarea
-                                                      value={noteDraftText}
-                                                      onChange={(e) => setNoteDraftText(e.target.value)}
-                                                      placeholder="Write your short note, key pattern trick, edge cases, or revision tips for this problem..."
-                                                      className="w-full min-h-[75px] text-xs p-2.5 rounded-md border border-border bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary resize-y font-sans placeholder:text-muted-foreground/60 leading-relaxed"
-                                                      rows={3}
-                                                    />
-
-                                                    <div className="flex items-center justify-between gap-2">
-                                                      <span className="text-[10px] text-muted-foreground font-mono">
-                                                        {noteDraftText.length} / 5000 chars
-                                                      </span>
-                                                      <div className="flex items-center gap-2">
-                                                        <Button
-                                                          type="button"
-                                                          variant="outline"
-                                                          size="sm"
-                                                          onClick={() => setActiveNoteProblemId(null)}
-                                                          className="h-7 text-xs px-2.5 cursor-pointer"
-                                                        >
-                                                          Close
-                                                        </Button>
-                                                        <Button
-                                                          type="button"
-                                                          size="sm"
-                                                          disabled={isSavingNote || !noteDraftText.trim()}
-                                                          onClick={() => handleSaveNote(prob.id, pat.id)}
-                                                          className="h-7 text-xs px-3 gap-1.5 cursor-pointer"
-                                                        >
-                                                          {isSavingNote && <Loader2 className="h-3 w-3 animate-spin" />}
-                                                          <span>{problemNotes[prob.id] ? "Update Note" : "Save Note"}</span>
-                                                        </Button>
-                                                      </div>
-                                                    </div>
+                                                    )}
                                                   </div>
                                                 )}
                                               </div>

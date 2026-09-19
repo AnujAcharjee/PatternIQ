@@ -29,6 +29,7 @@ import {
   ArrowRight,
   ChevronRight,
   BookCheck,
+  FileText,
 } from "lucide-react";
 
 interface ProblemData {
@@ -663,13 +664,15 @@ export default function PatternDetailPage({ params }: { params: { slug: string }
                         notes.map((note) => (
                           <div
                             key={note.id}
-                            className="group relative rounded-lg border border-border/80 bg-muted/30 p-3 text-xs text-foreground/90 leading-relaxed pr-7"
+                            className="group relative rounded-lg border border-border/80 bg-muted/30 hover:bg-muted/50 hover:border-amber-500/30 p-3 text-xs text-foreground/90 leading-relaxed pr-8 transition-all flex items-start gap-2.5 shadow-xs"
                           >
-                            <span>{note.content}</span>
+                            <FileText className="h-3.5 w-3.5 text-amber-500 dark:text-amber-400 shrink-0 mt-0.5" />
+                            <span className="italic font-sans text-xs flex-1 text-foreground/90">{note.content}</span>
                             <button
                               onClick={() => handleDeleteNote(note.id)}
-                              className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive cursor-pointer"
+                              className="absolute top-2.5 right-2.5 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive cursor-pointer p-0.5"
                               aria-label="Delete note"
+                              title="Delete note"
                             >
                               <Trash2 className="h-3 w-3" />
                             </button>

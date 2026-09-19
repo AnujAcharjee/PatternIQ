@@ -11,7 +11,8 @@ export const GET = apiHandler(async (req: NextRequest, { auth }: { auth: AuthCon
   const { searchParams } = new URL(req.url);
   const patternId = searchParams.get("patternId") || undefined;
   const problemId = searchParams.get("problemId") || undefined;
-  const notes = await listNotes(userId, { patternId, problemId });
+  const type = searchParams.get("type") || undefined;
+  const notes = await listNotes(userId, { patternId, problemId, type });
   return ok(notes);
 });
 

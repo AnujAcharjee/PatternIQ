@@ -1,13 +1,33 @@
 import { prisma } from "@/lib/prisma";
 import { ApiError } from "@/lib/errors";
 
-export async function listNotes(userId: string, filter?: { patternId?: string; problemId?: string } | string) {
+export interface NoteFilter {
+  patternId?: string;
+  problemId?: string;
+  type?: "pattern" | "problem" | string;
+}
+
+export async function listNotes(userId: string, filter?: NoteFilter | string) {
   const whereClause: Record<string, unknown> = { userId };
+
   if (typeof filter === "string") {
     whereClause.patternId = filter;
+    whereClause.problemId = null;
   } else if (filter) {
-    if (filter.patternId) whereClause.patternId = filter.patternId;
-    if (filter.problemId) whereClause.problemId = filter.problemId;
+    if (filter.type === "pattern") {
+      whereClause.problemId = null;
+      if (filter.patternId) whereClause.patternId = filter.patternId;
+    } else if (filter.type === "problem") {
+      whereClause.problemId = { not: null };
+      if (filter.problemId) whereClause.problemId = filter.problemId;
+    } else {
+      if (filter.problemId) {
+        whereClause.problemId = filter.problemId;
+      } else if (filter.patternId) {
+        whereClause.patternId = filter.patternId;
+        whereClause.problemId = null;
+      }
+    }
   }
 
   return prisma.note.findMany({
@@ -21,8 +41,7 @@ export async function createNote(userId: string, content: string, patternId?: st
     data: {
       userId,
       content,
-      ...(patternId ? { patternId } : {}),
-      ...(problemId ? { problemId } : {}),
+      ...(problemId ? { problemId, patternId: null } : patternId ? { patternId } : {}),
     },
   });
 }
